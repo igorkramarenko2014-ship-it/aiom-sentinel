@@ -1,0 +1,1 @@
+Scope as defined in original DeepSeek source.

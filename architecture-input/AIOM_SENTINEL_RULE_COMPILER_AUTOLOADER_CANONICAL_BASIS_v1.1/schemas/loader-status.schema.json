@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Loader Status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["state", "active_bundles", "integrity_tier", "timestamp"],
+  "properties": {
+    "state": { "enum": ["EMPTY", "DISCOVERING", "VERIFYING", "READY", "DEGRADED", "REJECTED"] },
+    "active_bundles": { "type": "array", "items": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "uniqueItems": true },
+    "integrity_tier": { "enum": ["DETERMINISTIC", "REPRODUCIBLE_PINNED"] },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "last_error": { "type": "string" }
+  }
+}

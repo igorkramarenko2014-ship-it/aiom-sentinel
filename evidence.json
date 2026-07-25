@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.1.0",
+  "scan_id": "bad84c5a-c773-43d1-ab4f-d53cd30af73f",
+  "records": [
+    {
+      "schema_version": "1.1.0",
+      "evidence_id": "fed8428e-35c4-5be9-b2d6-b4cb94966d28",
+      "scan_id": "bad84c5a-c773-43d1-ab4f-d53cd30af73f",
+      "timestamp": [
+        2026,
+        206,
+        19,
+        42,
+        38,
+        219228000,
+        0,
+        0,
+        0
+      ],
+      "target_path": {
+        "display": "/Users/igorkramarenko/Desktop/AIOM-Sentinel/tests/fixtures/harmless-negative.txt",
+        "raw_base64": "L1VzZXJzL2lnb3JrcmFtYXJlbmtvL0Rlc2t0b3AvQUlPTS1TZW50aW5lbC90ZXN0cy9maXh0dXJlcy9oYXJtbGVzcy1uZWdhdGl2ZS50eHQ=",
+        "encoding": "unix-bytes"
+      },
+      "canonical_path_status": "VERIFIED_INSIDE_ROOT",
+      "file_identity": {
+        "os_family": "MAC_OS",
+        "platform_file_id": "17960123",
+        "volume_or_device_id": "16777230",
+        "canonical_path_sha256": "1ea116113548884e7628f3df99ad2ab2c287542304128005de4c95fdbba5313f",
+        "size": 68,
+        "change_indicator": "1784644533000000000",
+        "identity_quality": "NATIVE"
+      },
+      "file_size": 68,
+      "hashes": {
+        "sha256": "59ff59cdbf948bd13893820e0499edbe41d3f8e54dd4d1f3a4d85e1de4f21a90",
+        "sha1": "4a81e2025539af36c5d394e13a920b204eb62d7a",
+        "md5": "cde70721d9db22c640908b65cbb330d4"
+      },
+      "entropy": {
+        "shannon_bits_per_byte": 4.165594504572978
+      },
+      "file_type": "OTHER",
+      "format_support": "UNSUPPORTED",
+      "pe_metadata": null,
+      "rule_matches": [],
+      "findings": [],
+      "scanner_version": "0.1.0",
+      "engine_version": {
+        "scanner": "0.1.0",
+        "rules": "disabled",
+        "pe_parser": "sentinel-pe/1"
+      },
+      "duration_ms": 0,
+      "errors": [],
+      "verdict": "CLEAN",
+      "risk_score": 0,
+      "threat_confidence": "LOW",
+      "benign_confidence": "LOW",
+      "evidence_quality": "AE2"
+    }
+  ],
+  "traversal_errors": []
+}

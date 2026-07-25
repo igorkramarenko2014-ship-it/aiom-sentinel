@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Rule Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["rule_id", "name", "author", "description", "severity", "tags", "date"],
+  "properties": {
+    "rule_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "name": { "type": "string", "maxLength": 256 },
+    "author": { "type": "string", "maxLength": 128 },
+    "description": { "type": "string", "maxLength": 1024 },
+    "severity": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+    "tags": { "type": "array", "items": { "type": "string", "maxLength": 64 }, "uniqueItems": true },
+    "date": { "type": "string", "format": "date-time" },
+    "reference": { "type": "string", "maxLength": 512 }
+  }
+}

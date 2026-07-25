@@ -1,0 +1,22 @@
+[package]
+name = "sentinel-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "sentinel"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+sentinel-core = { path = "../sentinel-core" }
+sentinel-evidence = { path = "../sentinel-evidence" }
+sentinel-rules = { path = "../sentinel-rules" }
+sentinel-scanner = { path = "../sentinel-scanner" }
+tokio.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

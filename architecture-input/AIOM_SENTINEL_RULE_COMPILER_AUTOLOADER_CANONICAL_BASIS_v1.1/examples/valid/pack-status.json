@@ -1,0 +1,12 @@
+{
+  "compiler_status": "NOT_EXECUTED",
+  "fuzz_status": "NOT_EXECUTED",
+  "generation_timestamp": "2026-07-21T12:00:00Z",
+  "integration_status": "NOT_EXECUTED",
+  "live_repository_status": "NOT_INCLUDED",
+  "pack_name": "AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_DEEPSEEK_VERIFY_v1.0",
+  "pack_version": "1.0",
+  "safe_to_merge": false,
+  "test_status": "NOT_EXECUTED",
+  "verifier_status": "NOT_EXECUTED"
+}

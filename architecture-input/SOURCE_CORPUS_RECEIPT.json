@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "corpus_name": "AIOM_SENTINEL_EXACT_SOURCE_CORPUS_v1.0",
+  "corpus_sha256": "9949a04e4a6cf00ba7009daf6822e657fa9ad4f25b69f340159666fbbaf6ff22",
+  "consolidated_contract_sha256": "db9e0f0e7a9d2995245bc91e363c21af338488c095eed2980355ce0627f53a2b",
+  "source_count": 3,
+  "bounded_corpus": true,
+  "external_claims_allowed": false,
+  "publication_status": "LOCAL_RESTRICTED_NOT_FOR_PUBLIC_RELEASE",
+  "public_release_corpus_included": false,
+  "publication_decision": "The verbatim research corpus contains unnecessary offensive detail. Retain it locally by hash; publish this receipt and the defensive claim ledger only."
+}

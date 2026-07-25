@@ -1,0 +1,15 @@
+/target/
+/evidence.json
+/evidence-*.json
+/coverage/
+fuzz/artifacts/
+fuzz/corpus/
+/architecture-input/AIOM_SENTINEL_EXACT_SOURCE_CORPUS_v1.0.md
+*.swp
+*.swo
+.DS_Store
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example

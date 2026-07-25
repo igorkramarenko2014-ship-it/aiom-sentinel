@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Compiler Identity",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["compiler_name", "compiler_version", "compiler_sha256"],
+  "properties": {
+    "compiler_name": { "type": "string" },
+    "compiler_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "compiler_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

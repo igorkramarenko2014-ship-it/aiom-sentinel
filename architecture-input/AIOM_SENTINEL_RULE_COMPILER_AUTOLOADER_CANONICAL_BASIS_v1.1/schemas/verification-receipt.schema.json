@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Verification Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["bundle_id", "checks", "overall_verdict", "timestamp", "verifier"],
+  "properties": {
+    "bundle_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "checks": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "signature_valid": { "type": "boolean" },
+        "hash_match": { "type": "boolean" },
+        "lifecycle_valid": { "type": "boolean" },
+        "capabilities_ok": { "type": "boolean" },
+        "path_safe": { "type": "boolean" },
+        "read_only": { "type": "boolean" },
+        "actions_taken_empty": { "type": "boolean" }
+      }
+    },
+    "overall_verdict": { "enum": ["PASS", "FAIL"] },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "verifier": { "type": "string" }
+  }
+}

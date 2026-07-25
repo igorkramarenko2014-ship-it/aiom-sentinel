@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Signature Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["signed", "signature", "signing_key_id"],
+  "properties": {
+    "signed": {
+      "type": "object", "additionalProperties": false,
+      "required": ["domain_separator", "schema_version", "bundle_id", "bundle_version", "compiler", "canonical_manifest_hash", "lifecycle", "validity_window", "required_capabilities", "signing_key_id"],
+      "properties": {
+        "domain_separator": { "const": "AIOM_SENTINEL_RULE_BUNDLE_V1" },
+        "schema_version": { "type": "string", "pattern": "^1\\.0$" },
+        "bundle_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "bundle_version": { "type": "integer" },
+        "compiler": { "$ref": "compiler-identity.schema.json" },
+        "canonical_manifest_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "lifecycle": { "enum": ["DRAFT", "COMPILED", "SIGNED", "ACTIVE", "EXPIRED", "REVOKED", "RETIRED"] },
+        "validity_window": {
+          "type": "object", "additionalProperties": false,
+          "required": ["not_before", "not_after"],
+          "properties": {
+            "not_before": { "type": "string", "format": "date-time" },
+            "not_after": { "type": "string", "format": "date-time" }
+          }
+        },
+        "required_capabilities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "signing_key_id": { "type": "string" }
+      }
+    },
+    "signature": { "type": "string", "description": "Base64-encoded signature" },
+    "signing_key_id": { "type": "string" }
+  }
+}

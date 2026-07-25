@@ -1,0 +1,15 @@
+[package]
+name = "sentinel-evidence"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+sentinel-core = { path = "../sentinel-core" }
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

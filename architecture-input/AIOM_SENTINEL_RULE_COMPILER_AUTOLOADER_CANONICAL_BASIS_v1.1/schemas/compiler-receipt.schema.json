@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Compiler Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["compiler", "input_hashes", "output_bundle_id", "compilation_timestamp", "status"],
+  "properties": {
+    "compiler": { "$ref": "compiler-identity.schema.json" },
+    "input_hashes": { "type": "object", "patternProperties": { ".*": { "type": "string", "pattern": "^[a-f0-9]{64}$" } } },
+    "output_bundle_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "compilation_timestamp": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["PASS", "FAIL"] },
+    "error_log": { "type": "string", "maxLength": 2048 }
+  }
+}

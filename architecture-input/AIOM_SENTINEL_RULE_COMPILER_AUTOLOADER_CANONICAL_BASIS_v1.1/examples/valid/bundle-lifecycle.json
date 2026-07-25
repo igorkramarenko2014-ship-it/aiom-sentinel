@@ -1,0 +1,26 @@
+{
+  "bundle_id": "4e5fae142c0cd7935e9bc14fc2ed2cb56766c310c522a0159f0930b0b857a413",
+  "current_state": "ACTIVE",
+  "history": [
+    {
+      "reason": "Created",
+      "state": "DRAFT",
+      "timestamp": "2026-07-21T10:00:00Z"
+    },
+    {
+      "reason": "Compiled successfully",
+      "state": "COMPILED",
+      "timestamp": "2026-07-21T11:00:00Z"
+    },
+    {
+      "reason": "Signed by test key",
+      "state": "SIGNED",
+      "timestamp": "2026-07-21T11:30:00Z"
+    },
+    {
+      "reason": "Activated",
+      "state": "ACTIVE",
+      "timestamp": "2026-07-21T12:00:00Z"
+    }
+  ]
+}

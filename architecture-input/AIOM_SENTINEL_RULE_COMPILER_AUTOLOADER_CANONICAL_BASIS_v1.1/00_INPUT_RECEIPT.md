@@ -1,0 +1,1 @@
+Input receipt placeholder – see build script.

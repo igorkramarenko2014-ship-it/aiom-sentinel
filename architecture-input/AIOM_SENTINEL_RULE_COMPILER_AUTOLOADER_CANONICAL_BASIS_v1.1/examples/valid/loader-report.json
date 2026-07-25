@@ -1,0 +1,17 @@
+{
+  "details": [
+    {
+      "bundle_id": "4e5fae142c0cd7935e9bc14fc2ed2cb56766c310c522a0159f0930b0b857a413",
+      "checks": {
+        "capabilities_ok": true,
+        "hash_match": true,
+        "lifecycle_valid": true,
+        "path_safe": true,
+        "signature_valid": true
+      },
+      "reason": "",
+      "verdict": "PASS"
+    }
+  ],
+  "status": "READY"
+}

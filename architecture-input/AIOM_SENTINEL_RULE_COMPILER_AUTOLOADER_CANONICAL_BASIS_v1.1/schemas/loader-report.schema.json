@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Loader Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "details"],
+  "properties": {
+    "status": { "enum": ["READY", "DEGRADED", "REJECTED"] },
+    "details": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["bundle_id", "verdict", "checks"],
+        "properties": {
+          "bundle_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "verdict": { "enum": ["PASS", "FAIL", "REJECTED"] },
+          "checks": {
+            "type": "object", "additionalProperties": false,
+            "properties": {
+              "signature_valid": { "type": "boolean" },
+              "hash_match": { "type": "boolean" },
+              "lifecycle_valid": { "type": "boolean" },
+              "capabilities_ok": { "type": "boolean" },
+              "path_safe": { "type": "boolean" }
+            }
+          },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

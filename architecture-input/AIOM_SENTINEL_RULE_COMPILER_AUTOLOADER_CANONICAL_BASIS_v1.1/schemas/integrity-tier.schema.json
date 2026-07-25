@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Integrity Tier",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tier", "authority", "evidence"],
+  "properties": {
+    "tier": { "enum": ["DETERMINISTIC", "REPRODUCIBLE_PINNED"] },
+    "authority": { "enum": ["ADVISORY", "NATIVE"] },
+    "evidence": { "type": "string", "maxLength": 1024 }
+  }
+}

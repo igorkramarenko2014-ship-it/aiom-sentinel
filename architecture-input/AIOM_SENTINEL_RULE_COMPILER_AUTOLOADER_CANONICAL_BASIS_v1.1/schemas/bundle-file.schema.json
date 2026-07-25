@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bundle File Entry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path", "sha256", "size", "role"],
+  "properties": {
+    "path": { "type": "string", "maxLength": 512 },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "size": { "type": "integer", "minimum": 1 },
+    "role": { "enum": ["RULE", "METADATA", "SIGNATURE", "OTHER"] }
+  }
+}

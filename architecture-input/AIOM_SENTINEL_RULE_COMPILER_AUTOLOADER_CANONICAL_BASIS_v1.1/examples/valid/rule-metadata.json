@@ -1,0 +1,11 @@
+{
+  "author": "AIOM",
+  "date": "2026-07-21T12:00:00Z",
+  "description": "A valid metadata example.",
+  "name": "Test Rule",
+  "rule_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "severity": "LOW",
+  "tags": [
+    "test"
+  ]
+}

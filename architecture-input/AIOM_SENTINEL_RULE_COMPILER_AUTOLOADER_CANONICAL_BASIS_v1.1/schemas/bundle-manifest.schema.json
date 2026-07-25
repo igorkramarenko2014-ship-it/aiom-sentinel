@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bundle Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["bundle_id", "bundle_version", "compiler", "schema_version", "canonical_manifest_hash", "files", "lifecycle", "validity_window", "required_capabilities"],
+  "properties": {
+    "bundle_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "bundle_version": { "type": "integer", "minimum": 1 },
+    "schema_version": { "type": "string", "pattern": "^1\\.0$" },
+    "compiler": { "$ref": "compiler-identity.schema.json" },
+    "canonical_manifest_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "files": { "type": "array", "items": { "$ref": "bundle-file.schema.json" }, "minItems": 1 },
+    "lifecycle": { "enum": ["DRAFT", "COMPILED", "SIGNED", "ACTIVE", "EXPIRED", "REVOKED", "RETIRED"] },
+    "validity_window": {
+      "type": "object", "additionalProperties": false,
+      "required": ["not_before", "not_after"],
+      "properties": {
+        "not_before": { "type": "string", "format": "date-time" },
+        "not_after": { "type": "string", "format": "date-time" }
+      }
+    },
+    "required_capabilities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bundle Lifecycle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["bundle_id", "current_state", "history"],
+  "properties": {
+    "bundle_id": { "$ref": "bundle-manifest.schema.json#/properties/bundle_id" },
+    "current_state": { "enum": ["DRAFT", "COMPILED", "SIGNED", "ACTIVE", "EXPIRED", "REVOKED", "RETIRED"] },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["state", "timestamp", "reason"],
+        "properties": {
+          "state": { "enum": ["DRAFT", "COMPILED", "SIGNED", "ACTIVE", "EXPIRED", "REVOKED", "RETIRED"] },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

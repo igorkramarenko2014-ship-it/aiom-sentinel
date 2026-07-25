@@ -1,0 +1,1 @@
+This synthetic fixture intentionally contains no configured marker.

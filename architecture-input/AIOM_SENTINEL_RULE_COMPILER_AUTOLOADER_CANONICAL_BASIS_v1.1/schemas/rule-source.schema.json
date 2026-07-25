@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Rule Source",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["rule_id", "rule_text", "language"],
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of canonical rule source"
+    },
+    "rule_text": { "type": "string", "maxLength": 65536 },
+    "language": { "enum": ["YARA_X"] },
+    "metadata_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

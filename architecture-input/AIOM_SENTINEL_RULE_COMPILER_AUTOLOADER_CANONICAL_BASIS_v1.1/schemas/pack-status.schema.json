@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pack Status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pack_name", "pack_version", "generation_timestamp", "live_repository_status", "integration_status", "safe_to_merge"],
+  "properties": {
+    "pack_name": { "type": "string" },
+    "pack_version": { "type": "string" },
+    "generation_timestamp": { "type": "string", "format": "date-time" },
+    "live_repository_status": { "enum": ["NOT_INCLUDED"] },
+    "integration_status": { "enum": ["NOT_EXECUTED", "FAIL", "PASS"] },
+    "safe_to_merge": { "type": "boolean" },
+    "compiler_status": { "enum": ["NOT_EXECUTED", "PASS", "FAIL"] },
+    "test_status": { "enum": ["NOT_EXECUTED", "PASS", "FAIL"] },
+    "verifier_status": { "enum": ["NOT_EXECUTED", "PASS", "FAIL"] },
+    "fuzz_status": { "enum": ["NOT_EXECUTED", "PASS", "FAIL"] }
+  }
+}

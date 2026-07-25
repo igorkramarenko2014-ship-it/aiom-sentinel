@@ -1,0 +1,361 @@
+{
+  "bundle_id": "2eb3dd1f16abd7c399321635919d13a860369d24ce359c084c6e84d778054d0c",
+  "bundle_version": 1,
+  "canonical_manifest_hash": "8cec8a404adc2163e6a5f608fa1329957713f4824caf46cc8f0a9974a6b2980a",
+  "compiler": {
+    "compiler_name": "compute_hashes.py",
+    "compiler_sha256": "d2684ffc99158a72c992f88edbf885687a7964062140726da32783592a859be5",
+    "compiler_version": "1.0.0"
+  },
+  "files": [
+    {
+      "path": "00_INPUT_RECEIPT.md",
+      "role": "OTHER",
+      "sha256": "afde23bfd35b60e760a37206832bd280aebfd28ec2cef3bffb0d979cf9cd490c",
+      "size": 47
+    },
+    {
+      "path": "01_SCOPE_AND_NON_GOALS.md",
+      "role": "OTHER",
+      "sha256": "84cd42b4d56ee3428274065e6adbf2906d48bea5d66a21fc802dd08d0efcf157",
+      "size": 45
+    },
+    {
+      "path": "CANONICAL_SERIALIZATION_CONTRACT.md",
+      "role": "OTHER",
+      "sha256": "6a4724d20e208fd39cdcaf5789857ef35176a02e2ed76957f0420bd2e9d8e268",
+      "size": 25
+    },
+    {
+      "path": "CONTRACT_INDEX.md",
+      "role": "OTHER",
+      "sha256": "6067b187210f4fe0149e317344094141f9e263ee61539559272520263aacba38",
+      "size": 19
+    },
+    {
+      "path": "DETERMINISM_CONTRACT.md",
+      "role": "OTHER",
+      "sha256": "92115378f9198c6a29ddb0ae06c8c16ccf12188ab0b8b27c4e8399ada71f5dd6",
+      "size": 34
+    },
+    {
+      "path": "INDEPENDENT_VERIFIER_SPEC.md",
+      "role": "OTHER",
+      "sha256": "b3ef0e8c113209c00cf19c540d22fd89df25d15dbc701188b4efe0cc0dcbbf46",
+      "size": 23
+    },
+    {
+      "path": "LICENSE_NOTES.md",
+      "role": "OTHER",
+      "sha256": "dc360f160df3efa6001377034ce07644d29d7378c5d986acb9206f544520aa4a",
+      "size": 32
+    },
+    {
+      "path": "LOADER_STATE_CONTRACT.md",
+      "role": "OTHER",
+      "sha256": "7f984d6dfde94c42c2f0cdcf762ee6258144b115e684ba223320b5f5a411774c",
+      "size": 21
+    },
+    {
+      "path": "NEGATIVE_TEST_REPORT.md",
+      "role": "OTHER",
+      "sha256": "dfdbcce571eb911d2beb86c2bd60b766d8280377ed66202b9da5807d916b5252",
+      "size": 34
+    },
+    {
+      "path": "PACK_STATUS.json",
+      "role": "OTHER",
+      "sha256": "28b53d753c29ed036367699036060e695c797e05a5da34d158968910bb05c52c",
+      "size": 406
+    },
+    {
+      "path": "README.md",
+      "role": "OTHER",
+      "sha256": "fc637d8736a56ab14dab8cef997764a5d660a33bd6de60111de2eb25ba4b5958",
+      "size": 58
+    },
+    {
+      "path": "SIGNATURE_CONTEXT_CONTRACT.md",
+      "role": "OTHER",
+      "sha256": "2f6b695c3f819dadecbc8d67f58d45cb6d5ed709ea276d4f137003ef1f6653c0",
+      "size": 31
+    },
+    {
+      "path": "VERIFY_PACK.py",
+      "role": "OTHER",
+      "sha256": "1968aa6a5391556344088b9a541b957a3feac7dae5e612d4cddd64c5b023bdc7",
+      "size": 12880
+    },
+    {
+      "path": "examples/invalid/actions_taken_nonempty.json",
+      "role": "OTHER",
+      "sha256": "ef3f908d26b15626248235e09aa74a038ee92f91c5582d4215d35ee7eb857475",
+      "size": 28
+    },
+    {
+      "path": "examples/invalid/coverage_full_fail.json",
+      "role": "OTHER",
+      "sha256": "617bd49f1ecfbea0ec0fd47c8a8021f876ba4a37d197a875b85129b481accfa8",
+      "size": 53
+    },
+    {
+      "path": "examples/invalid/duplicate_ruleid.json",
+      "role": "OTHER",
+      "sha256": "d47233b4f6dc7dbd610ff3275e788163b1c85309b5439daaad105487efa8a594",
+      "size": 177
+    },
+    {
+      "path": "examples/invalid/expired_active.json",
+      "role": "OTHER",
+      "sha256": "9e96f455bad180426c86fec88a2014335f7af1ff7837f96afbf27d70aae12e9e",
+      "size": 196
+    },
+    {
+      "path": "examples/invalid/external_deterministic.json",
+      "role": "OTHER",
+      "sha256": "e4640faf66ac85f765510bddb6c5f488c7ea1ed6d05a41bf14d49c09a34fb289",
+      "size": 82
+    },
+    {
+      "path": "examples/invalid/fake_verified.json",
+      "role": "OTHER",
+      "sha256": "b37ec922b06a141ff43bdfcfb1ec56218386260fdc023dfca745e8eb176c0633",
+      "size": 192
+    },
+    {
+      "path": "examples/invalid/lifecycle_invalid.json",
+      "role": "OTHER",
+      "sha256": "4726af77b26bfe03cf304d6cd23ccb42e01420a9071da70110c5a3df13d47aa8",
+      "size": 105
+    },
+    {
+      "path": "examples/invalid/malformed_signature.json",
+      "role": "OTHER",
+      "sha256": "cb3fa1afbf542d84d5156975a55b838015d13db1e6ce66a555c915195b4ff5b0",
+      "size": 59
+    },
+    {
+      "path": "examples/invalid/manifest_hash_mismatch.json",
+      "role": "OTHER",
+      "sha256": "76574b81949adaf2ec01b168a745dd3bda990881f23b16744586c2ab201ac625",
+      "size": 621
+    },
+    {
+      "path": "examples/invalid/read_only_false.json",
+      "role": "OTHER",
+      "sha256": "f591c798668ccf62e6605bd0d00560b089777c40b30f4ca2dff52486e6fd0437",
+      "size": 19
+    },
+    {
+      "path": "examples/invalid/revoked_ready.json",
+      "role": "OTHER",
+      "sha256": "d5e8abebdc9b330fa3c29e1a89e6d51bb7112a3bce4a72310a1b1be817910b82",
+      "size": 132
+    },
+    {
+      "path": "examples/invalid/sha1_canonical.json",
+      "role": "OTHER",
+      "sha256": "d2b4471f1fb2506e00c995f51c79665304db76923f44e9b97d2f581b173efd2c",
+      "size": 216
+    },
+    {
+      "path": "examples/invalid/unknown_capability.json",
+      "role": "OTHER",
+      "sha256": "fed9cc9ca5988bad0869eb94afd223c65829ee9bd2c42458dd2dc7b4852d5504",
+      "size": 630
+    },
+    {
+      "path": "examples/invalid/unsafe_path.json",
+      "role": "OTHER",
+      "sha256": "9164cf729b00637ba589934899b2030c70f04ff58655de01a2463748b3b1a482",
+      "size": 20
+    },
+    {
+      "path": "examples/invalid/unsigned_bundle.json",
+      "role": "OTHER",
+      "sha256": "26ba7691cd605f5260a2e7f8d78f98600df052ef846a0f6a95e6e660f0efc855",
+      "size": 40
+    },
+    {
+      "path": "examples/invalid/wrong_hash_rule_id.json",
+      "role": "OTHER",
+      "sha256": "3af4bbe74041507e96a608e57c42cd2002c37ac2ab8ded8fac6ef84eea567b21",
+      "size": 59
+    },
+    {
+      "path": "examples/valid/bundle-file.json",
+      "role": "OTHER",
+      "sha256": "b44ffbdcfdbea2890e3938554a4b3b6b7a31a2b784b8c853dedd2c9ad288345a",
+      "size": 142
+    },
+    {
+      "path": "examples/valid/bundle-lifecycle.json",
+      "role": "OTHER",
+      "sha256": "0bc4ce7bc689b3f9c239fef20a208b42249b11d5816d866943cc6f46a550bbcc",
+      "size": 589
+    },
+    {
+      "path": "examples/valid/bundle-manifest.json",
+      "role": "OTHER",
+      "sha256": "1a9dffe7860be9cd1e6380dec33ac853a99e961eb8f5d9d8114a7b17e7c2d4ee",
+      "size": 774
+    },
+    {
+      "path": "examples/valid/compiler-identity.json",
+      "role": "OTHER",
+      "sha256": "ae113a9b405e8b56e95d9d12ddc937b3ab73eeb4708684d35115334348e38845",
+      "size": 167
+    },
+    {
+      "path": "examples/valid/compiler-receipt.json",
+      "role": "OTHER",
+      "sha256": "c745dcf8adba483ce410e213ded99cd7c0c795bbd7b308552ee127aeed3a11cd",
+      "size": 484
+    },
+    {
+      "path": "examples/valid/integrity-tier.json",
+      "role": "OTHER",
+      "sha256": "4199d44fa74523677209a1e442743afbfc18e335554aa70abdd0ee076ec7b34e",
+      "size": 143
+    },
+    {
+      "path": "examples/valid/loader-report.json",
+      "role": "OTHER",
+      "sha256": "4f740376ed703c9365815c5abe44a5d3d15aa22409932e82868e32ba981bbe4d",
+      "size": 366
+    },
+    {
+      "path": "examples/valid/loader-status.json",
+      "role": "OTHER",
+      "sha256": "273acbf9da5d622e3a17debcb588a55fe7903f924181573802dae6eb495ac4f9",
+      "size": 216
+    },
+    {
+      "path": "examples/valid/pack-status.json",
+      "role": "OTHER",
+      "sha256": "d200413ea427c3f86a7491478a5862edb7fac7eeea15f5213cb1e238e3ae78c0",
+      "size": 405
+    },
+    {
+      "path": "examples/valid/rejection-receipt.json",
+      "role": "OTHER",
+      "sha256": "4800094b9b0f6ead92e5908fab8e20327b592272b118d12424541cb4021ba46b",
+      "size": 206
+    },
+    {
+      "path": "examples/valid/rule-metadata.json",
+      "role": "OTHER",
+      "sha256": "9fb7fd662c837efa57f05c0e01267dfcaaecd10126ed2c89f29550392afb9b67",
+      "size": 255
+    },
+    {
+      "path": "examples/valid/rule-source.json",
+      "role": "OTHER",
+      "sha256": "563fa072349bc1d631c3cc1755e1a3693651656a217365ce742edec53545f296",
+      "size": 242
+    },
+    {
+      "path": "examples/valid/signature-envelope.json",
+      "role": "OTHER",
+      "sha256": "e398173b1127101d88cbf347d4cbfb80dfbd3b6bd10f51c504f8881a46bbb97f",
+      "size": 793
+    },
+    {
+      "path": "examples/valid/verification-receipt.json",
+      "role": "OTHER",
+      "sha256": "7892c369b33c6747c39bb44317b52a6a7915b18c7b5c8c33e3a37d2f78817d5a",
+      "size": 398
+    },
+    {
+      "path": "schemas/bundle-file.schema.json",
+      "role": "OTHER",
+      "sha256": "f0c28c39daa02af4c55de42b801a6cfe8cb91ee42dd03bffbaaf186a0a1af865",
+      "size": 454
+    },
+    {
+      "path": "schemas/bundle-lifecycle.schema.json",
+      "role": "OTHER",
+      "sha256": "dbf9c15d90232e6cd1eacb3932959b5b192c139fcbb727c3a4ac749475983a3e",
+      "size": 850
+    },
+    {
+      "path": "schemas/bundle-manifest.schema.json",
+      "role": "OTHER",
+      "sha256": "7dea87a6aefac505d4717b6d6d51dd7e61d90fb179d86505aa514ee24a046692",
+      "size": 1274
+    },
+    {
+      "path": "schemas/compiler-identity.schema.json",
+      "role": "OTHER",
+      "sha256": "457c32952fa442c1c40a9f1612b186cc8ea6323eb49163f6f99d03146839afd2",
+      "size": 446
+    },
+    {
+      "path": "schemas/compiler-receipt.schema.json",
+      "role": "OTHER",
+      "sha256": "2cb470ea9383b67d78b744c481ea37d249513f6da75c8b940481d70e1f935afe",
+      "size": 704
+    },
+    {
+      "path": "schemas/integrity-tier.schema.json",
+      "role": "OTHER",
+      "sha256": "5682ec28581f922fc77d355fd3814cff9db7ed67d33e1fad88f1bc45329436f8",
+      "size": 392
+    },
+    {
+      "path": "schemas/loader-report.schema.json",
+      "role": "OTHER",
+      "sha256": "c4e07403bc895b2f1b32c55b8ca73ea492a3c71c400346b97280c8189c51b840",
+      "size": 1067
+    },
+    {
+      "path": "schemas/loader-status.schema.json",
+      "role": "OTHER",
+      "sha256": "26719fa9b145c684c611571a72844e7a31691ddd526951f0c1b89f27331a53e9",
+      "size": 639
+    },
+    {
+      "path": "schemas/pack-status.schema.json",
+      "role": "OTHER",
+      "sha256": "721d46dfa20b82e1cbfc76e4b216080884d658742c79d9046aa29410857c67b3",
+      "size": 896
+    },
+    {
+      "path": "schemas/rejection-receipt.schema.json",
+      "role": "OTHER",
+      "sha256": "9ed5d4812ed6a1c6d621e7399623a1784597a74b7c21a53016d8c9105247afab",
+      "size": 438
+    },
+    {
+      "path": "schemas/rule-metadata.schema.json",
+      "role": "OTHER",
+      "sha256": "4ffe9925900f18ab0d53aa562086a49e14ef56d434151066fec04e20190975d1",
+      "size": 769
+    },
+    {
+      "path": "schemas/rule-source.schema.json",
+      "role": "OTHER",
+      "sha256": "1e352447ad567e7455f7b7303f411194b36ce5f3c89764c6f708338a45522979",
+      "size": 526
+    },
+    {
+      "path": "schemas/signature-envelope.schema.json",
+      "role": "OTHER",
+      "sha256": "0f41f05b772895de05320b82b49ebb8f622d57d898a15d77ff83670af2c1d663",
+      "size": 1670
+    },
+    {
+      "path": "schemas/verification-receipt.schema.json",
+      "role": "OTHER",
+      "sha256": "760cec1388d4a03acc463613480a2f020913a71497fd05ba62969791bc57b305",
+      "size": 921
+    }
+  ],
+  "lifecycle": "TEST",
+  "required_capabilities": [],
+  "schema_version": "1.0",
+  "validity_window": {
+    "not_after": "2099-12-31T23:59:59Z",
+    "not_before": "2026-07-21T00:00:00Z"
+  }
+}

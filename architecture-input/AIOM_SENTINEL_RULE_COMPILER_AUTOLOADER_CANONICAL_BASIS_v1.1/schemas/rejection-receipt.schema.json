@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Rejection Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["bundle_id", "reason", "timestamp", "verifier"],
+  "properties": {
+    "bundle_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "reason": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "verifier": { "type": "string" }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "bundle_id": "4e5fae142c0cd7935e9bc14fc2ed2cb56766c310c522a0159f0930b0b857a413",
+  "checks": {
+    "actions_taken_empty": true,
+    "capabilities_ok": true,
+    "hash_match": true,
+    "lifecycle_valid": true,
+    "path_safe": true,
+    "read_only": true,
+    "signature_valid": true
+  },
+  "overall_verdict": "PASS",
+  "timestamp": "2026-07-21T12:00:00Z",
+  "verifier": "AIOM Verifier 1.0.0"
+}

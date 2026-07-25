@@ -1,0 +1,27 @@
+[package]
+name = "sentinel-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.12"
+sentinel-pe = { path = "../crates/sentinel-pe" }
+sentinel-rules = { path = "../crates/sentinel-rules" }
+
+[[bin]]
+name = "pe_parser"
+path = "fuzz_targets/pe_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "rule_parser"
+path = "fuzz_targets/rule_parser.rs"
+test = false
+doc = false
+bench = false

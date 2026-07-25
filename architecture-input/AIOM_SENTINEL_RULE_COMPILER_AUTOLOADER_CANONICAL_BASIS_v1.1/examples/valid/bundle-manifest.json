@@ -1,0 +1,25 @@
+{
+  "bundle_id": "4e5fae142c0cd7935e9bc14fc2ed2cb56766c310c522a0159f0930b0b857a413",
+  "bundle_version": 1,
+  "canonical_manifest_hash": "df468418540c9f2272cab34985f95d876224abae39879870543054c512e3c8dd",
+  "compiler": {
+    "compiler_name": "AIOM Sentinel Compiler",
+    "compiler_sha256": "6838ca566d6545b10ccbdd35a6a4a5d2fd3ea8c74024f654cdadfa104927ba55",
+    "compiler_version": "1.0.0"
+  },
+  "files": [
+    {
+      "path": "rules/test.yr",
+      "role": "RULE",
+      "sha256": "563fa072349bc1d631c3cc1755e1a3693651656a217365ce742edec53545f296",
+      "size": 242
+    }
+  ],
+  "lifecycle": "ACTIVE",
+  "required_capabilities": [],
+  "schema_version": "1.0",
+  "validity_window": {
+    "not_after": "2099-12-31T23:59:59Z",
+    "not_before": "2026-07-21T00:00:00Z"
+  }
+}
