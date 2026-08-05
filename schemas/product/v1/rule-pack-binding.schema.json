@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"sentinel-product/rule-pack-binding/v1","type":"object","required":["pack_id","expected_bytes_sha256","source_path"],"additionalProperties":false,"properties":{"pack_id":{"type":"string","minLength":1},"expected_bytes_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"source_path":{"type":"string","minLength":1}}}

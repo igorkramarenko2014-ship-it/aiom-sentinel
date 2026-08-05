@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"sentinel-product/scan-file-request/v1","type":"object","required":["request_id","target_path","rule_pack"],"additionalProperties":false,"properties":{"request_id":{"type":"string","format":"uuid"},"target_path":{"type":"string","minLength":1},"rule_pack":{"$ref":"rule-pack-binding.schema.json"}}}

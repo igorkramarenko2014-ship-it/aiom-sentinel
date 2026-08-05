@@ -1,0 +1,1 @@
+{"request_id":"00000000-0000-0000-0000-000000000001","target_path":"tests/fixtures/harmless-positive.txt","rule_pack":{"pack_id":"fixture-pack","expected_bytes_sha256":"not-a-sha256","source_path":"tests/fixtures/harmless.rules"}}

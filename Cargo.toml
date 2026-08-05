@@ -7,6 +7,8 @@ members = [
   "crates/sentinel-evidence",
   "crates/sentinel-scanner",
   "crates/sentinel-cli",
+  "crates/sentinel-product-dto",
+  "crates/sentinel-product-service",
   "tests",
 ]
 resolver = "2"

@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"sentinel-product/canonical-receipt/v1","type":"object","required":["schema_version","payload","payload_sha256"],"additionalProperties":false,"properties":{"schema_version":{"const":"sentinel-product/v1"},"payload":{"$ref":"scan-result.schema.json"},"payload_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}}}

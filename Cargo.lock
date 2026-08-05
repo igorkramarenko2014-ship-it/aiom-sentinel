@@ -835,6 +835,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "sentinel-product-dto"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "sentinel-product-service"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "sentinel-core",
+ "sentinel-product-dto",
+ "sentinel-rules",
+ "sentinel-scanner",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "sentinel-rules"
 version = "0.1.0"
 dependencies = [
