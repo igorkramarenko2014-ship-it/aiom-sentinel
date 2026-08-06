@@ -24,6 +24,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 pub mod container;
+pub mod quarantine;
 
 pub trait FolderProgressSink: Send + Sync {
     fn emit(&self, progress: sentinel_product_dto::FolderProgressV1) -> Result<(), String>;

@@ -956,6 +956,7 @@ dependencies = [
  "sentinel-product-dto",
  "sentinel-rules",
  "sentinel-scanner",
+ "serde",
  "serde_json",
  "sha2 0.10.9",
  "tar",

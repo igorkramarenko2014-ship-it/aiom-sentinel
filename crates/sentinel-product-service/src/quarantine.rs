@@ -1,0 +1,60 @@
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuarantineRecord {
+    pub id: String,
+    pub original_path: PathBuf,
+    pub quarantine_path: PathBuf,
+    pub sha256: String,
+    pub size_bytes: u64,
+}
+
+pub fn quarantine_file(source: &Path, root: &Path, id: &str) -> std::io::Result<QuarantineRecord> {
+    let meta = fs::symlink_metadata(source)?;
+    if !meta.is_file() || meta.file_type().is_symlink() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "only regular files can be quarantined",
+        ));
+    }
+    fs::create_dir_all(root)?;
+    let bytes = fs::read(source)?;
+    let digest = hex::encode(Sha256::digest(&bytes));
+    let destination = root.join(format!("{id}-{digest}"));
+    if destination.exists() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            "quarantine destination exists",
+        ));
+    }
+    fs::rename(source, &destination)?;
+    Ok(QuarantineRecord {
+        id: id.to_owned(),
+        original_path: source.to_owned(),
+        quarantine_path: destination,
+        sha256: digest,
+        size_bytes: meta.len(),
+    })
+}
+
+pub fn restore_file(record: &QuarantineRecord) -> std::io::Result<()> {
+    if record.original_path.exists() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            "restore destination exists",
+        ));
+    }
+    let bytes = fs::read(&record.quarantine_path)?;
+    if hex::encode(Sha256::digest(&bytes)) != record.sha256 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "quarantine digest mismatch",
+        ));
+    }
+    fs::rename(&record.quarantine_path, &record.original_path)
+}
