@@ -24,6 +24,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 pub mod container;
+pub mod pack_update;
 pub mod quarantine;
 pub mod watcher;
 
