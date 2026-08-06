@@ -197,6 +197,9 @@ fn activate_pack_v1(path: String, state: tauri::State<'_, AppState>) -> Result<(
 fn rollback_pack_v1(state: tauri::State<'_, AppState>) -> Result<(), ApplicationErrorV1> { let mut active = state.active_pack.lock().unwrap(); let mut previous = state.previous_pack.lock().unwrap(); if previous.is_none() { return Err(ApplicationErrorV1 { code: "NO_PREVIOUS_PACK".into(), message: "No previous pack is available".into(), path: None, retryable: false }); } std::mem::swap(&mut *active, &mut *previous); Ok(()) }
 
 #[tauri::command]
+fn inspect_metadata_container_v1(path: String) -> Value { let tool = if path.to_ascii_lowercase().ends_with(".dmg") { "hdiutil" } else if path.to_ascii_lowercase().ends_with(".pkg") { "pkgutil" } else { return serde_json::json!({"status":"UNSUPPORTED"}); }; let args: Vec<&str> = if tool == "hdiutil" { vec!["imageinfo", &path] } else { vec!["--check-signature", &path] }; match std::process::Command::new(tool).args(args).output() { Ok(output) => serde_json::json!({"status":if output.status.success(){"COMPLETE"}else{"FAILED"},"tool":tool,"metadata":String::from_utf8_lossy(&output.stdout).to_string(),"errors":String::from_utf8_lossy(&output.stderr).to_string()}), Err(error) => serde_json::json!({"status":"UNAVAILABLE","tool":tool,"errors":[error.to_string()]}) } }
+
+#[tauri::command]
 async fn scan_selected_folder_v1(app: tauri::AppHandle, request_id: String, selection_id: String, state: tauri::State<'_, AppState>) -> Result<FolderManifestReceiptV1, ApplicationErrorV1> {
     let root = state.selected_folder.lock().unwrap().as_ref().filter(|(id, _)| id == &selection_id).map(|(_, path)| path.clone()).ok_or_else(|| ApplicationErrorV1 { code: "FOLDER_SELECTION_NOT_FOUND".into(), message: "Unknown folder selection id".into(), path: None, retryable: false })?;
     if request_id.trim().is_empty() || request_id.len() > 128 { return Err(ApplicationErrorV1 { code: "INVALID_REQUEST_ID".into(), message: "Folder request id must be bounded and non-empty".into(), path: None, retryable: false }); }
@@ -251,7 +254,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState { selected: Mutex::new(None), selected_folder: Mutex::new(None), receipt: Mutex::new(None), folder_receipt: Mutex::new(None), active_scan: Arc::new(Mutex::new(None)), quarantine: Mutex::new(load_records(&default_root())), watcher_stop: Mutex::new(None), active_pack: Mutex::new(None), previous_pack: Mutex::new(None) })
-        .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_file_yara_v1, inspect_selected_container_v1, quarantine_selected_v1, restore_quarantine_v1, start_watcher_v1, stop_watcher_v1, optional_engine_status_v1, stage_pack_v1, activate_pack_v1, rollback_pack_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
+        .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_file_yara_v1, inspect_selected_container_v1, inspect_metadata_container_v1, quarantine_selected_v1, restore_quarantine_v1, start_watcher_v1, stop_watcher_v1, optional_engine_status_v1, stage_pack_v1, activate_pack_v1, rollback_pack_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
