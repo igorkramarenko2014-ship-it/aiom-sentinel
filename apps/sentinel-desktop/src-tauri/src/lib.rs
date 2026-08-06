@@ -5,6 +5,7 @@ use sentinel_product_service::{build_receipt_v1, receipt_bytes, scan_file_v1, sc
 use sentinel_product_service::container::{inspect_tar, inspect_zip, ContainerLimits};
 use sentinel_product_service::quarantine::{default_root, load_records, persist_records, quarantine_file, restore_file, QuarantineRecord};
 use sentinel_product_service::watcher::{FileWatcher, WatchProfile};
+use sentinel_product_service::pack_update::{stage as stage_pack, validate_bundle, PackCandidate};
 use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -14,7 +15,7 @@ use tauri::{Manager, Emitter};
 
 struct SelectedFile { id: String, canonical_path: PathBuf, size_bytes: u64, digest: String }
 struct ActiveFolderScan { request_id: String, cancellation_token: Arc<AtomicBool>, latest_progress: Option<FolderProgressV1>, cancellation_requested: bool, terminal_emitted: bool, diagnostics: FolderScanRuntimeDiagnosticsV1 }
-struct AppState { selected: Mutex<Option<SelectedFile>>, selected_folder: Mutex<Option<(String, PathBuf)>>, receipt: Mutex<Option<CanonicalReceiptV1>>, folder_receipt: Mutex<Option<FolderManifestReceiptV1>>, active_scan: Arc<Mutex<Option<ActiveFolderScan>>>, quarantine: Mutex<Vec<QuarantineRecord>>, watcher_stop: Mutex<Option<Arc<AtomicBool>>> }
+struct AppState { selected: Mutex<Option<SelectedFile>>, selected_folder: Mutex<Option<(String, PathBuf)>>, receipt: Mutex<Option<CanonicalReceiptV1>>, folder_receipt: Mutex<Option<FolderManifestReceiptV1>>, active_scan: Arc<Mutex<Option<ActiveFolderScan>>>, quarantine: Mutex<Vec<QuarantineRecord>>, watcher_stop: Mutex<Option<Arc<AtomicBool>>>, active_pack: Mutex<Option<PackCandidate>>, previous_pack: Mutex<Option<PackCandidate>> }
 struct TauriProgressSink(tauri::AppHandle, Arc<Mutex<Option<ActiveFolderScan>>>);
 impl FolderProgressSink for TauriProgressSink { fn emit(&self, progress: FolderProgressV1) -> Result<(), String> { let result = self.0.emit("sentinel://folder-progress-v1", progress.clone()).map_err(|e| e.to_string()); if let Ok(mut active) = self.1.lock() { if let Some(scan) = active.as_mut() { if scan.request_id == progress.request_id && !scan.terminal_emitted { scan.latest_progress = Some(progress.clone()); scan.cancellation_requested = progress.cancellation_requested; scan.terminal_emitted = progress.terminal; if let Err(error) = &result { scan.diagnostics.progress_delivery_error_count += 1; scan.diagnostics.last_progress_delivery_error = Some(error.clone()); scan.diagnostics.terminal_progress_delivery_failed |= progress.terminal; } } } } result } }
 
@@ -187,6 +188,15 @@ fn stop_watcher_v1(state: tauri::State<'_, AppState>) -> Result<(), ApplicationE
 fn optional_engine_status_v1() -> Value { serde_json::json!({"capa":{"status":"UNAVAILABLE","reason":"optional runtime not installed"},"yara_x":{"status":"UNAVAILABLE","reason":"optional runtime not installed"}}) }
 
 #[tauri::command]
+fn stage_pack_v1(path: String, expected_sha256: String) -> Result<Value, ApplicationErrorV1> { let candidate = validate_bundle(PathBuf::from(path).as_path(), &expected_sha256).map_err(|e| ApplicationErrorV1 { code: "PACK_VALIDATION_FAILED".into(), message: e.to_string(), path: None, retryable: false })?; let staged = stage_pack(&candidate, &default_root().join("packs/staged")).map_err(|e| ApplicationErrorV1 { code: "PACK_STAGE_FAILED".into(), message: e.to_string(), path: None, retryable: true })?; Ok(serde_json::json!({"status":"STAGED","content_id":candidate.content_id,"path":staged})) }
+
+#[tauri::command]
+fn activate_pack_v1(path: String, state: tauri::State<'_, AppState>) -> Result<(), ApplicationErrorV1> { let candidate = PackCandidate { source: PathBuf::from(path.clone()), content_id: path.rsplit('/').next().unwrap_or_default().to_owned() }; let mut active = state.active_pack.lock().unwrap(); let mut previous = state.previous_pack.lock().unwrap(); *previous = active.take(); *active = Some(candidate); Ok(()) }
+
+#[tauri::command]
+fn rollback_pack_v1(state: tauri::State<'_, AppState>) -> Result<(), ApplicationErrorV1> { let mut active = state.active_pack.lock().unwrap(); let mut previous = state.previous_pack.lock().unwrap(); if previous.is_none() { return Err(ApplicationErrorV1 { code: "NO_PREVIOUS_PACK".into(), message: "No previous pack is available".into(), path: None, retryable: false }); } std::mem::swap(&mut *active, &mut *previous); Ok(()) }
+
+#[tauri::command]
 async fn scan_selected_folder_v1(app: tauri::AppHandle, request_id: String, selection_id: String, state: tauri::State<'_, AppState>) -> Result<FolderManifestReceiptV1, ApplicationErrorV1> {
     let root = state.selected_folder.lock().unwrap().as_ref().filter(|(id, _)| id == &selection_id).map(|(_, path)| path.clone()).ok_or_else(|| ApplicationErrorV1 { code: "FOLDER_SELECTION_NOT_FOUND".into(), message: "Unknown folder selection id".into(), path: None, retryable: false })?;
     if request_id.trim().is_empty() || request_id.len() > 128 { return Err(ApplicationErrorV1 { code: "INVALID_REQUEST_ID".into(), message: "Folder request id must be bounded and non-empty".into(), path: None, retryable: false }); }
@@ -240,8 +250,8 @@ async fn export_receipt_v1(app: tauri::AppHandle, state: tauri::State<'_, AppSta
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .manage(AppState { selected: Mutex::new(None), selected_folder: Mutex::new(None), receipt: Mutex::new(None), folder_receipt: Mutex::new(None), active_scan: Arc::new(Mutex::new(None)), quarantine: Mutex::new(load_records(&default_root())), watcher_stop: Mutex::new(None) })
-        .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_file_yara_v1, inspect_selected_container_v1, quarantine_selected_v1, restore_quarantine_v1, start_watcher_v1, stop_watcher_v1, optional_engine_status_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
+        .manage(AppState { selected: Mutex::new(None), selected_folder: Mutex::new(None), receipt: Mutex::new(None), folder_receipt: Mutex::new(None), active_scan: Arc::new(Mutex::new(None)), quarantine: Mutex::new(load_records(&default_root())), watcher_stop: Mutex::new(None), active_pack: Mutex::new(None), previous_pack: Mutex::new(None) })
+        .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_file_yara_v1, inspect_selected_container_v1, quarantine_selected_v1, restore_quarantine_v1, start_watcher_v1, stop_watcher_v1, optional_engine_status_v1, stage_pack_v1, activate_pack_v1, rollback_pack_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
