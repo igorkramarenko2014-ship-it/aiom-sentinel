@@ -4,6 +4,7 @@ use sentinel_product_dto::{ApplicationErrorV1, CanonicalReceiptV1, FolderManifes
 use sentinel_product_service::{build_receipt_v1, receipt_bytes, scan_file_v1, scan_folder_with_control, FolderProgressSink};
 use sentinel_product_service::container::{inspect_tar, inspect_zip, ContainerLimits};
 use sentinel_product_service::quarantine::{default_root, load_records, persist_records, quarantine_file, restore_file, QuarantineRecord};
+use sentinel_product_service::watcher::{FileWatcher, WatchProfile};
 use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -13,7 +14,7 @@ use tauri::{Manager, Emitter};
 
 struct SelectedFile { id: String, canonical_path: PathBuf, size_bytes: u64, digest: String }
 struct ActiveFolderScan { request_id: String, cancellation_token: Arc<AtomicBool>, latest_progress: Option<FolderProgressV1>, cancellation_requested: bool, terminal_emitted: bool, diagnostics: FolderScanRuntimeDiagnosticsV1 }
-struct AppState { selected: Mutex<Option<SelectedFile>>, selected_folder: Mutex<Option<(String, PathBuf)>>, receipt: Mutex<Option<CanonicalReceiptV1>>, folder_receipt: Mutex<Option<FolderManifestReceiptV1>>, active_scan: Arc<Mutex<Option<ActiveFolderScan>>>, quarantine: Mutex<Vec<QuarantineRecord>> }
+struct AppState { selected: Mutex<Option<SelectedFile>>, selected_folder: Mutex<Option<(String, PathBuf)>>, receipt: Mutex<Option<CanonicalReceiptV1>>, folder_receipt: Mutex<Option<FolderManifestReceiptV1>>, active_scan: Arc<Mutex<Option<ActiveFolderScan>>>, quarantine: Mutex<Vec<QuarantineRecord>>, watcher_stop: Mutex<Option<Arc<AtomicBool>>> }
 struct TauriProgressSink(tauri::AppHandle, Arc<Mutex<Option<ActiveFolderScan>>>);
 impl FolderProgressSink for TauriProgressSink { fn emit(&self, progress: FolderProgressV1) -> Result<(), String> { let result = self.0.emit("sentinel://folder-progress-v1", progress.clone()).map_err(|e| e.to_string()); if let Ok(mut active) = self.1.lock() { if let Some(scan) = active.as_mut() { if scan.request_id == progress.request_id && !scan.terminal_emitted { scan.latest_progress = Some(progress.clone()); scan.cancellation_requested = progress.cancellation_requested; scan.terminal_emitted = progress.terminal; if let Err(error) = &result { scan.diagnostics.progress_delivery_error_count += 1; scan.diagnostics.last_progress_delivery_error = Some(error.clone()); scan.diagnostics.terminal_progress_delivery_failed |= progress.terminal; } } } } result } }
 
@@ -170,6 +171,19 @@ fn restore_quarantine_v1(id: String, state: tauri::State<'_, AppState>) -> Resul
 }
 
 #[tauri::command]
+fn start_watcher_v1(profile: String, app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(), ApplicationErrorV1> {
+    if state.watcher_stop.lock().unwrap().is_some() { return Err(ApplicationErrorV1 { code: "WATCHER_ALREADY_ACTIVE".into(), message: "A watcher is already active".into(), path: None, retryable: true }); }
+    let profile = match profile.as_str() { "DOWNLOADS_TRIAGE" => WatchProfile::Downloads, "PERSISTENCE_MACOS" => WatchProfile::PersistenceMacos, _ => return Err(ApplicationErrorV1 { code: "WATCHER_PROFILE_INVALID".into(), message: "Unknown watcher profile".into(), path: None, retryable: false }) };
+    let watcher = FileWatcher::start(profile).map_err(|e| ApplicationErrorV1 { code: "WATCHER_START_FAILED".into(), message: e.to_string(), path: None, retryable: true })?;
+    let stop = Arc::new(AtomicBool::new(false)); *state.watcher_stop.lock().unwrap() = Some(stop.clone());
+    std::thread::spawn(move || { while !stop.load(Ordering::SeqCst) { if let Some(event) = watcher.try_next() { let _ = app.emit("sentinel://watcher-event-v1", serde_json::json!({"profile": profile as u8, "event": format!("{:?}", event)})); } else { std::thread::sleep(std::time::Duration::from_millis(100)); } } });
+    Ok(())
+}
+
+#[tauri::command]
+fn stop_watcher_v1(state: tauri::State<'_, AppState>) -> Result<(), ApplicationErrorV1> { if let Some(stop) = state.watcher_stop.lock().unwrap().take() { stop.store(true, Ordering::SeqCst); } Ok(()) }
+
+#[tauri::command]
 async fn scan_selected_folder_v1(app: tauri::AppHandle, request_id: String, selection_id: String, state: tauri::State<'_, AppState>) -> Result<FolderManifestReceiptV1, ApplicationErrorV1> {
     let root = state.selected_folder.lock().unwrap().as_ref().filter(|(id, _)| id == &selection_id).map(|(_, path)| path.clone()).ok_or_else(|| ApplicationErrorV1 { code: "FOLDER_SELECTION_NOT_FOUND".into(), message: "Unknown folder selection id".into(), path: None, retryable: false })?;
     if request_id.trim().is_empty() || request_id.len() > 128 { return Err(ApplicationErrorV1 { code: "INVALID_REQUEST_ID".into(), message: "Folder request id must be bounded and non-empty".into(), path: None, retryable: false }); }
@@ -223,8 +237,8 @@ async fn export_receipt_v1(app: tauri::AppHandle, state: tauri::State<'_, AppSta
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .manage(AppState { selected: Mutex::new(None), selected_folder: Mutex::new(None), receipt: Mutex::new(None), folder_receipt: Mutex::new(None), active_scan: Arc::new(Mutex::new(None)), quarantine: Mutex::new(load_records(&default_root())) })
-        .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_file_yara_v1, inspect_selected_container_v1, quarantine_selected_v1, restore_quarantine_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
+        .manage(AppState { selected: Mutex::new(None), selected_folder: Mutex::new(None), receipt: Mutex::new(None), folder_receipt: Mutex::new(None), active_scan: Arc::new(Mutex::new(None)), quarantine: Mutex::new(load_records(&default_root())), watcher_stop: Mutex::new(None) })
+        .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_file_yara_v1, inspect_selected_container_v1, quarantine_selected_v1, restore_quarantine_v1, start_watcher_v1, stop_watcher_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
