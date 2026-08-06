@@ -109,6 +109,74 @@ pub fn inspect_zip(path: &Path, limits: &ContainerLimits) -> std::io::Result<Con
     Ok(result)
 }
 
+pub fn inspect_tar(path: &Path, limits: &ContainerLimits) -> std::io::Result<ContainerInspection> {
+    let file = File::open(path)?;
+    let mut archive = tar::Archive::new(file);
+    let mut result = ContainerInspection {
+        state: ContainerState::Complete,
+        container_type: "TAR".into(),
+        entries: Vec::new(),
+        expanded_bytes: 0,
+        errors: Vec::new(),
+    };
+    for (index, item) in archive.entries()?.enumerate() {
+        if index >= limits.max_entries {
+            result.state = ContainerState::LimitExceeded;
+            result.errors.push("max_entries exceeded".into());
+            break;
+        }
+        let mut entry = item?;
+        let path = entry.path()?.into_owned();
+        if !safe_relative(&path) {
+            result.state = ContainerState::Partial;
+            result
+                .errors
+                .push(format!("rejected path: {}", path.display()));
+            continue;
+        }
+        let entry_type = entry.header().entry_type();
+        if !entry_type.is_file() {
+            result.state = ContainerState::Partial;
+            result
+                .errors
+                .push(format!("non-regular entry: {}", path.display()));
+            continue;
+        }
+        let declared = entry.header().size()?;
+        if declared > limits.max_single_entry_bytes
+            || result.expanded_bytes.saturating_add(declared) > limits.max_total_expanded_bytes
+        {
+            result.state = ContainerState::LimitExceeded;
+            result
+                .errors
+                .push(format!("size limit exceeded: {}", path.display()));
+            break;
+        }
+        let mut digest = Sha256::new();
+        let copied = std::io::copy(&mut entry, &mut HashWriter(&mut digest))?;
+        result.expanded_bytes += copied;
+        result.entries.push(ContainerEntry {
+            relative_path: path.to_string_lossy().into_owned(),
+            declared_size: declared,
+            subject_sha256: Some(hex::encode(digest.finalize())),
+            scanned: true,
+            error: None,
+        });
+    }
+    Ok(result)
+}
+
+struct HashWriter<'a>(&'a mut Sha256);
+impl std::io::Write for HashWriter<'_> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.0.update(buf);
+        Ok(buf.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
