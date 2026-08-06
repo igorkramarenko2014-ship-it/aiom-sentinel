@@ -1,3 +1,4 @@
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
     fs::File,
@@ -6,7 +7,7 @@ use std::{
 };
 use zip::ZipArchive;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum ContainerState {
     Complete,
     Partial,
@@ -16,7 +17,7 @@ pub enum ContainerState {
     Unsupported,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ContainerLimits {
     pub max_entries: usize,
     pub max_single_entry_bytes: u64,
@@ -33,7 +34,7 @@ impl Default for ContainerLimits {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ContainerEntry {
     pub relative_path: String,
     pub declared_size: u64,
@@ -42,7 +43,7 @@ pub struct ContainerEntry {
     pub error: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ContainerInspection {
     pub state: ContainerState,
     pub container_type: String,
