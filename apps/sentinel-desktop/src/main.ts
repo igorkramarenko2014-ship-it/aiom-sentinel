@@ -15,6 +15,7 @@ const appRoot = root;
 let state: State = "READY";
 let selection: Selection | null = null;
 let receipt: Receipt | null = null;
+let containerReceipt: any = null;
 let folderSelection: Selection | null = null;
 let folderReceipt: FolderReceipt | null = null;
 let exportResult: { written_path: string; bytes: number; sha256: string } | null = null;
@@ -47,15 +48,17 @@ function render(): void {
   const active = state === "SCANNING" || Boolean(preparationMessage);
   if (active) workspace.setAttribute("aria-busy", "true");
   if (state === "READY") { const heading = el("h1", preparationMessage ? "PREPARING FILE" : "ACTIVE CASE"); if (preparationMessage) heading.className = "thinking-title"; workspace.append(heading, el("p", preparationMessage || "Choose a file or folder to build evidence."), preparationMessage ? el("p", "Calculating file identity…") : el("p", "Sentinel reads selected bytes without modifying them."), preparationMessage ? evidenceStream() : el("span"), button("Choose File", Boolean(preparationMessage), chooseFile), button("Choose Folder", Boolean(preparationMessage), chooseFolder)); }
-  if (state === "SELECTED" && selection) { workspace.append(el("h1", "SELECTED FILE"), el("h2", selection.display_name), el("p", `${selection.size_bytes} bytes`), el("p", "Read-only selection"), button("Build Evidence", false, scanFile), button("Choose Another", false, chooseFile), button("Choose Folder", false, chooseFolder)); }
+  if (state === "SELECTED" && selection) { workspace.append(el("h1", "SELECTED FILE"), el("h2", selection.display_name), el("p", `${selection.size_bytes} bytes`), el("p", "Read-only selection"), button("Build Evidence", false, scanFile), button("Inspect Container", false, inspectContainer), button("Choose Another", false, chooseFile), button("Choose Folder", false, chooseFolder)); }
   if (state === "SELECTED" && folderSelection && !selection) { workspace.append(el("h1", "SELECTED FOLDER"), el("h2", folderSelection.display_name), el("p", "Recursive · Read-only"), button("Build Folder Evidence", false, scanFolder), button("Choose Another", false, chooseFolder), button("Choose File", false, chooseFile)); }
   if (state === "SCANNING") { const heading = el("h1", folderSelection ? (cancellationRequested ? "CANCELLING…" : "BUILDING FOLDER EVIDENCE…") : "BUILDING EVIDENCE…"); heading.className = "thinking-title"; workspace.append(heading, evidenceStream(), el("p", folderSelection ? `Discovered ${folderProgress?.discovered_count ?? 0} · Accepted ${folderProgress?.accepted_count ?? 0} · Processed ${folderProgress?.processed_count ?? 0}` : "Building deterministic evidence…"), folderSelection ? el("p", `Findings ${folderProgress?.finding_count ?? 0} · Skipped ${folderProgress?.skipped_count ?? 0} · Errors ${folderProgress?.error_count ?? 0}`) : el("p", "The selected file remains unchanged.")); if (folderSelection) workspace.append(el("p", folderProgress?.current_relative_path ?? "Waiting for first file…"), button(cancellationRequested ? "Cancelling…" : "Cancel", cancellationRequested, cancelFolderScan)); }
   if (state === "RESULT" && receipt) renderResult(workspace);
+  if (state === "RESULT" && containerReceipt) renderContainerResult(workspace);
   if (state === "RESULT" && folderReceipt) renderFolderResult(workspace);
   if (state === "EXPORT_COMPLETE" && exportResult) { workspace.append(el("h1", "RECEIPT EXPORTED"), el("p", exportResult.written_path), el("p", `${exportResult.bytes} bytes`), el("p", `SHA-256 ${exportResult.sha256}`), button("Done", false, () => { state = "RESULT"; render(); })); }
   if (state === "ERROR" && error) { workspace.append(el("h1", "UNABLE TO COMPLETE"), el("p", error.code), el("p", error.message), button("Try Again", false, () => { state = selection ? "SELECTED" : "READY"; error = null; render(); })); }
   const footer = el("footer", "Read-only · Local · Deterministic evidence · Development build · Receipt may contain local file paths"); appRoot.append(header, rail, workspace, footer);
 }
+function renderContainerResult(workspace: HTMLElement): void { if (!containerReceipt) return; workspace.append(el("h1", containerReceipt.state === "Complete" ? "CONTAINER INSPECTED" : "CONTAINER EVIDENCE INCOMPLETE"), el("p", `Type  ${containerReceipt.container_type}`), el("p", `Entries  ${containerReceipt.entries?.length ?? 0}`), el("p", `Expanded bytes  ${containerReceipt.expanded_bytes ?? 0}`)); for (const entry of containerReceipt.entries ?? []) { const row = el("section"); row.append(el("p", entry.relative_path), el("p", `SHA-256  ${entry.subject_sha256 ?? "—"}`)); workspace.append(row); } for (const message of containerReceipt.errors ?? []) workspace.append(el("p", `Error  ${message}`)); workspace.append(el("p", "No known rule matched in the inspected eligible files."), el("p", "This does not prove that the container or its contents are safe."), button("Inspect Another", false, chooseFile), button("Home", false, resetToHome)); }
 function renderResult(workspace: HTMLElement): void {
   if (!receipt) return;
   const incomplete = receipt.payload.state === "FAILED" || receipt.payload.errors.length > 0;
@@ -97,7 +100,7 @@ async function chooseFile(): Promise<void> {
     const sizeBytes = value.size_bytes ?? value.sizeBytes;
     if (typeof selectionId !== "string" || typeof displayName !== "string" || typeof sizeBytes !== "number") throw new Error("FILE_SELECTION_INVALID_RESPONSE");
     selection = { selection_id: selectionId, display_name: displayName, size_bytes: sizeBytes };
-    folderSelection = null; folderReceipt = null; receipt = null; error = null; state = "SELECTED";
+    folderSelection = null; folderReceipt = null; containerReceipt = null; receipt = null; error = null; state = "SELECTED";
     console.info("file selection state transition", { state, displayName });
     render();
   } catch (e) { preparationUnlisten?.(); preparationUnlisten = null; preparationMessage = ""; console.error("select_file_v1 rejected", e); error = e as AppError; state = "ERROR"; render(); }
@@ -106,6 +109,7 @@ async function chooseFolder(): Promise<void> { try { const folder = await invoke
 async function scanFolder(): Promise<void> { if (!folderSelection) return; activeFolderRequestId = crypto.randomUUID(); cancellationRequested = false; folderProgress = null; const requestId = activeFolderRequestId; folderProgressUnlisten = await listen<any>("sentinel://folder-progress-v1", (event) => { const payload = event.payload; if (payload.request_id !== activeFolderRequestId || payload.terminal) { if (payload.request_id === activeFolderRequestId && payload.terminal) folderProgress = payload; else return; } folderProgress = payload; if (payload.phase === "CANCELLING") cancellationRequested = true; render(); }); state = "SCANNING"; render(); try { folderReceipt = await invoke<FolderReceipt>("scan_selected_folder_v1", { requestId, selectionId: folderSelection.selection_id }); state = "RESULT"; } catch (e) { error = e as AppError; state = "ERROR"; } finally { activeFolderRequestId = null; folderProgressUnlisten?.(); folderProgressUnlisten = null; render(); } }
 async function cancelFolderScan(): Promise<void> { if (!activeFolderRequestId || cancellationRequested) return; cancellationRequested = true; render(); try { await invoke("cancel_folder_scan_v1", { requestId: activeFolderRequestId }); } catch (e) { error = e as AppError; state = "ERROR"; render(); } }
 async function scanFile(): Promise<void> { if (!selection) return; state = "SCANNING"; render(); try { receipt = await invoke<Receipt>("scan_selected_file_v1", { selectionId: selection.selection_id }); state = "RESULT"; render(); } catch (e) { error = e as AppError; state = "ERROR"; render(); } }
+async function inspectContainer(): Promise<void> { if (!selection) return; state = "SCANNING"; render(); try { containerReceipt = await invoke<any>("inspect_selected_container_v1", { selectionId: selection.selection_id }); state = "RESULT"; render(); } catch (e) { error = e as AppError; state = "ERROR"; render(); } }
 async function exportReceipt(): Promise<void> { try { exportResult = await invoke<typeof exportResult>("export_receipt_v1"); if (exportResult) { state = "EXPORT_COMPLETE"; render(); } } catch (e) { error = e as AppError; state = "ERROR"; render(); } }
 async function loadStatus(): Promise<void> { try { const status = await invoke<{ core_available: boolean }>("get_product_status_v1"); coreAvailable = status.core_available; } catch { coreAvailable = false; } render(); }
 void loadStatus();
