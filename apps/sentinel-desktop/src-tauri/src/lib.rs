@@ -117,6 +117,15 @@ async fn scan_selected_file_v1(app: tauri::AppHandle, selection_id: String, stat
 }
 
 #[tauri::command]
+async fn scan_selected_file_yara_v1(selection_id: String, state: tauri::State<'_, AppState>) -> Result<Value, ApplicationErrorV1> {
+    if std::env::var("AIOM_SENTINEL_YARA_ENABLED").ok().as_deref() != Some("1") {
+        return Ok(serde_json::json!({"status":"UNAVAILABLE","errors":[{"code":"YARA_DISABLED","message":"Experimental YARA is disabled"}]}));
+    }
+    let path = state.selected.lock().unwrap().as_ref().filter(|selected| selected.id == selection_id).map(|selected| selected.canonical_path.clone()).ok_or_else(|| ApplicationErrorV1 { code: "SELECTION_NOT_FOUND".into(), message: "Unknown selection id".into(), path: None, retryable: false })?;
+    Ok(experimental_yara(path).await.unwrap_or_else(|| serde_json::json!({"status":"UNAVAILABLE","errors":[{"code":"YARA_UNAVAILABLE","message":"YARA sidecar did not return a receipt"}]})))
+}
+
+#[tauri::command]
 async fn scan_selected_folder_v1(app: tauri::AppHandle, request_id: String, selection_id: String, state: tauri::State<'_, AppState>) -> Result<FolderManifestReceiptV1, ApplicationErrorV1> {
     let root = state.selected_folder.lock().unwrap().as_ref().filter(|(id, _)| id == &selection_id).map(|(_, path)| path.clone()).ok_or_else(|| ApplicationErrorV1 { code: "FOLDER_SELECTION_NOT_FOUND".into(), message: "Unknown folder selection id".into(), path: None, retryable: false })?;
     if request_id.trim().is_empty() || request_id.len() > 128 { return Err(ApplicationErrorV1 { code: "INVALID_REQUEST_ID".into(), message: "Folder request id must be bounded and non-empty".into(), path: None, retryable: false }); }
@@ -171,7 +180,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState { selected: Mutex::new(None), selected_folder: Mutex::new(None), receipt: Mutex::new(None), folder_receipt: Mutex::new(None), active_scan: Arc::new(Mutex::new(None)) })
-        .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
+        .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_file_yara_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
