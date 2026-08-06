@@ -73,12 +73,26 @@ pub struct ScanLimits {
     pub max_evidence_records: usize,
 }
 
+pub const DEFAULT_MAX_FILE_BYTES: u64 = 1024 * 1024 * 1024;
+pub const HARD_MAX_FILE_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+
+impl ScanLimits {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.max_file_size == 0 || self.max_file_size > HARD_MAX_FILE_BYTES {
+            return Err(format!(
+                "max_file_size must be between 1 and {HARD_MAX_FILE_BYTES} bytes"
+            ));
+        }
+        Ok(())
+    }
+}
+
 impl Default for ScanLimits {
     fn default() -> Self {
         Self {
             max_depth: 64,
             max_files: 100_000,
-            max_file_size: 256 * 1024 * 1024,
+            max_file_size: DEFAULT_MAX_FILE_BYTES,
             max_evidence_records: 100_000,
         }
     }
@@ -315,7 +329,8 @@ mod tests {
         let limits = ScanLimits::default();
         assert!(limits.max_depth > 0);
         assert!(limits.max_files <= 100_000);
-        assert!(limits.max_file_size <= 256 * 1024 * 1024);
+        assert_eq!(limits.max_file_size, DEFAULT_MAX_FILE_BYTES);
+        assert!(limits.validate().is_ok());
     }
 
     #[test]

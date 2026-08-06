@@ -67,6 +67,151 @@ pub struct ApplicationErrorV1 {
     pub retryable: bool,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FolderSelectionV1 {
+    pub selection_id: String,
+    pub display_name: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FolderProgressV1 {
+    pub schema_version: String,
+    pub request_id: String,
+    pub phase: FolderProgressPhaseV1,
+    pub discovered_count: u64,
+    pub accepted_count: u64,
+    pub processed_count: u64,
+    pub finding_count: u64,
+    pub skipped_count: u64,
+    pub error_count: u64,
+    pub current_relative_path: Option<String>,
+    pub processed_bytes: u64,
+    pub accepted_total_bytes: Option<u64>,
+    pub cancellation_requested: bool,
+    pub terminal: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FolderProgressPhaseV1 {
+    Discovering,
+    Accepting,
+    Scanning,
+    Cancelling,
+    Completed,
+    CompletedWithFindings,
+    Incomplete,
+    Cancelled,
+    Failed,
+}
+
+impl FolderProgressV1 {
+    pub fn discovering(request_id: &str) -> Self {
+        Self {
+            schema_version: DTO_SCHEMA_VERSION.into(),
+            request_id: request_id.into(),
+            phase: FolderProgressPhaseV1::Discovering,
+            discovered_count: 0,
+            accepted_count: 0,
+            processed_count: 0,
+            finding_count: 0,
+            skipped_count: 0,
+            error_count: 0,
+            current_relative_path: None,
+            processed_bytes: 0,
+            accepted_total_bytes: None,
+            cancellation_requested: false,
+            terminal: false,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FolderFileResultV1 {
+    pub relative_path: String,
+    pub size_bytes: u64,
+    pub content_sha256: Option<String>,
+    pub state: FolderFileStateV1,
+    pub finding_count: u64,
+    pub findings: Vec<ScanFindingV1>,
+    pub errors: Vec<ApplicationErrorV1>,
+    pub child_evidence_sha256: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FolderFileStateV1 {
+    Processed,
+    SkippedSymlink,
+    SkippedLimit,
+    ReadError,
+    FileChangedDuringScan,
+    Cancelled,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FolderScanStateV1 {
+    Completed,
+    CompletedWithFindings,
+    Incomplete,
+    Cancelled,
+    Failed,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FolderScanResultV1 {
+    pub schema_version: String,
+    pub request_id: String,
+    pub state: FolderScanStateV1,
+    pub root_label: String,
+    pub discovered_count: u64,
+    pub accepted_count: u64,
+    pub processed_count: u64,
+    pub finding_count: u64,
+    pub skipped_count: u64,
+    pub error_count: u64,
+    pub processed_bytes: u64,
+    pub cancellation_requested: bool,
+    pub files: Vec<FolderFileResultV1>,
+    pub rule_pack: RulePackBindingV1,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FolderManifestReceiptV1 {
+    pub schema_version: String,
+    pub run: FolderScanResultV1,
+    pub content_manifest: FolderContentManifestV1,
+    pub content_manifest_sha256: String,
+    pub runtime_diagnostics: FolderScanRuntimeDiagnosticsV1,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FolderScanRuntimeDiagnosticsV1 {
+    pub progress_delivery_error_count: u64,
+    pub last_progress_delivery_error: Option<String>,
+    pub terminal_progress_delivery_failed: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FolderContentManifestV1 {
+    pub manifest_schema_version: String,
+    pub terminal_state: FolderScanStateV1,
+    pub rule_pack_id: String,
+    pub rule_pack_sha256: String,
+    pub aggregate_counts: Vec<(String, u64)>,
+    pub ordered_children: Vec<FolderManifestChildV1>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FolderManifestChildV1 {
+    pub relative_path: String,
+    pub size_bytes: u64,
+    pub content_sha256: Option<String>,
+    pub child_evidence_sha256: Option<String>,
+    pub state: FolderFileStateV1,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

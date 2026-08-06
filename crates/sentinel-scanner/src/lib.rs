@@ -235,6 +235,10 @@ pub async fn scan(
     request: &ScanRequest,
     rules: Option<Arc<dyn RuleEngine>>,
 ) -> Result<ScanResult, ScannerError> {
+    request
+        .limits
+        .validate()
+        .map_err(ScannerError::LimitExceeded)?;
     let root = request.target.0.clone();
     let metadata = std::fs::symlink_metadata(&root).map_err(|error| {
         ScannerError::InvalidTarget(format!("{}: {error}", root.to_string_lossy()))
@@ -410,20 +414,24 @@ async fn scan_file(
             return error_record(context, error.to_string());
         }
     };
-    let (file_type, format_support, pe_metadata, mut errors) = match parse(&bytes) {
-        Ok(metadata) => (
-            FileFormat::Pe,
-            CapabilityState::Supported,
-            Some(metadata),
-            Vec::new(),
-        ),
-        Err(PeError::NotPe) => classify_non_pe(&bytes),
-        Err(error) => (
-            FileFormat::Other,
-            CapabilityState::Unsupported,
-            None,
-            vec![format!("PE parser: {error}")],
-        ),
+    let (file_type, format_support, pe_metadata, mut errors) = if bytes.get(..2) != Some(b"MZ") {
+        classify_non_pe(&bytes)
+    } else {
+        match parse(&bytes) {
+            Ok(metadata) => (
+                FileFormat::Pe,
+                CapabilityState::Supported,
+                Some(metadata),
+                Vec::new(),
+            ),
+            Err(PeError::NotPe) => classify_non_pe(&bytes),
+            Err(error) => (
+                FileFormat::Other,
+                CapabilityState::Unsupported,
+                None,
+                vec![format!("PE parser: {error}")],
+            ),
+        }
     };
     let rule_matches = rules.map_or_else(Vec::new, |engine| engine.evaluate(&bytes));
     let findings = Vec::new();

@@ -1,0 +1,2 @@
+# identifier|namespace|literal|severity|confidence
+harmless_marker|synthetic|HARMLESS_SENTINEL_MARKER|LOW|20
