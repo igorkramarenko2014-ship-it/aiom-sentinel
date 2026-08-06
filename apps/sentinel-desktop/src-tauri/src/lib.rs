@@ -91,6 +91,13 @@ fn default_rule_binding(app: &tauri::AppHandle) -> Result<RulePackBindingV1, App
 }
 
 async fn experimental_yara(path: PathBuf) -> Option<Value> {
+    if let (Some(script), Some(registry)) = (std::env::var_os("AIOM_SENTINEL_YARA_MULTI_SCRIPT"), std::env::var_os("AIOM_SENTINEL_YARA_PACKS_JSON")) {
+        let python = std::env::var_os("AIOM_SENTINEL_YARA_PYTHON")?;
+        return tokio::task::spawn_blocking(move || {
+            let output = std::process::Command::new(python).args([script.to_string_lossy().as_ref(), registry.to_string_lossy().as_ref(), path.to_string_lossy().as_ref()]).output().ok()?;
+            serde_json::from_slice(&output.stdout).ok()
+        }).await.ok().flatten();
+    }
     let python = std::env::var_os("AIOM_SENTINEL_YARA_PYTHON")?;
     let pack = std::env::var_os("AIOM_SENTINEL_YARA_PACK")?;
     if std::env::var("AIOM_SENTINEL_YARA_ENABLED").ok().as_deref() != Some("1") { return None; }
