@@ -41,6 +41,7 @@ criterion = "0.5.1"
 zip = { version = "2.2.2", default-features = false, features = ["deflate"] }
 tar = "0.4.43"
 flate2 = "1.1.5"
+notify = "8.2.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
