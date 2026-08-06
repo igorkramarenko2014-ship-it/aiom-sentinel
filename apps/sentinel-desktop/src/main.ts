@@ -5,7 +5,7 @@ import "./style.css";
 type State = "READY" | "SELECTED" | "SCANNING" | "RESULT" | "ERROR" | "EXPORT_COMPLETE";
 type Selection = { selection_id: string; display_name: string; size_bytes: number };
 type Finding = { rule_id: string | null; matched_evidence: unknown; severity: string | null; confidence: string | null };
-type Receipt = { payload: { state: "COMPLETED" | "FAILED"; processed_count: number; finding_count: number; findings: Finding[]; errors: AppError[]; rule_pack: { pack_id: string; expected_bytes_sha256: string } }; payload_sha256: string };
+type Receipt = { payload: { state: "COMPLETED" | "FAILED"; processed_count: number; finding_count: number; findings: Finding[]; errors: AppError[]; rule_pack: { pack_id: string; expected_bytes_sha256: string }; yara?: { scan_status?: string; match_count?: number; matches?: Array<{ rule: string }>; rule_pack_content_id?: string } | null }; payload_sha256: string };
 type FolderReceipt = { run: { state: string; root_label: string; discovered_count: number; accepted_count: number; processed_count: number; finding_count: number; skipped_count: number; error_count: number; processed_bytes: number; files: Array<{ relative_path: string; state: string; finding_count: number; errors: AppError[] }>; rule_pack: { pack_id: string; expected_bytes_sha256: string } }; content_manifest_sha256: string };
 type AppError = { code: string; message: string; path?: string | null };
 
@@ -66,6 +66,7 @@ function renderResult(workspace: HTMLElement): void {
     workspace.append(el("p", "This file was not fully evaluated."));
   } else if (receipt.payload.finding_count === 0) workspace.append(el("p", "No patterns matched in this file."), el("p", "This does not prove that the file is safe."));
   else { workspace.append(el("h2", "PATTERN MATCHES")); for (const finding of receipt.payload.findings) { const row = el("section"); row.append(el("p", `Rule  ${finding.rule_id ?? "—"}`), el("p", `Evidence  ${JSON.stringify(finding.matched_evidence)}`)); if (finding.severity) row.append(el("p", `Severity  ${finding.severity}`)); if (finding.confidence) row.append(el("p", `Confidence  ${finding.confidence}`)); workspace.append(row); } }
+  if (receipt.payload.yara) { const y = receipt.payload.yara; const section = el("section"); section.append(el("h2", "YARA ENGINE — EXPERIMENTAL"), el("p", `Status  ${y.scan_status ?? "UNKNOWN"}`), el("p", `Matches  ${y.match_count ?? 0}`), el("p", `Pack  ${y.rule_pack_content_id ?? "—"}`)); for (const match of y.matches ?? []) section.append(el("p", `Rule  ${match.rule}`)); workspace.append(section); }
   workspace.append(button("Export Receipt", false, exportReceipt), button("Inspect Another File", false, chooseFile));
 }
 function renderFolderResult(workspace: HTMLElement): void {

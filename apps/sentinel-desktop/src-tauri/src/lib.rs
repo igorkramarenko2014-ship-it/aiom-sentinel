@@ -3,6 +3,7 @@ use sentinel_core::{DEFAULT_MAX_FILE_BYTES, HARD_MAX_FILE_BYTES};
 use sentinel_product_dto::{ApplicationErrorV1, CanonicalReceiptV1, FolderManifestReceiptV1, FolderProgressV1, FolderScanRuntimeDiagnosticsV1, RulePackBindingV1, ScanFileRequestV1, ScanResultV1};
 use sentinel_product_service::{build_receipt_v1, receipt_bytes, scan_file_v1, scan_folder_with_control, FolderProgressSink};
 use serde::Serialize;
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{path::PathBuf, sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}};
 use tauri_plugin_dialog::DialogExt;
@@ -89,6 +90,17 @@ fn default_rule_binding(app: &tauri::AppHandle) -> Result<RulePackBindingV1, App
     Ok(RulePackBindingV1 { pack_id: "sentinel-default".into(), expected_bytes_sha256: digest, source_path: source.to_string_lossy().into_owned() })
 }
 
+async fn experimental_yara(path: PathBuf) -> Option<Value> {
+    let python = std::env::var_os("AIOM_SENTINEL_YARA_PYTHON")?;
+    let pack = std::env::var_os("AIOM_SENTINEL_YARA_PACK")?;
+    if std::env::var("AIOM_SENTINEL_YARA_ENABLED").ok().as_deref() != Some("1") { return None; }
+    tokio::task::spawn_blocking(move || {
+        let loader = PathBuf::from(pack).join("loader/yara_loader.py");
+        let output = std::process::Command::new(python).args([loader.to_string_lossy().as_ref(), "--categories", "capabilities", "--path", path.to_string_lossy().as_ref(), "--json"]).output().ok()?;
+        serde_json::from_slice(&output.stdout).ok()
+    }).await.ok().flatten()
+}
+
 #[tauri::command]
 async fn scan_selected_file_v1(app: tauri::AppHandle, selection_id: String, state: tauri::State<'_, AppState>) -> Result<CanonicalReceiptV1, ApplicationErrorV1> {
     let selected = state.selected.lock().unwrap().as_ref().filter(|s| s.id == selection_id).map(|s| (s.canonical_path.clone(), s.size_bytes, s.digest.clone())).ok_or_else(|| ApplicationErrorV1 { code: "SELECTION_NOT_FOUND".into(), message: "Unknown selection id".into(), path: None, retryable: false })?;
@@ -97,7 +109,8 @@ async fn scan_selected_file_v1(app: tauri::AppHandle, selection_id: String, stat
     if metadata.len() != selected.1 || current != selected.2 { return Err(ApplicationErrorV1 { code: "FILE_CHANGED_SINCE_SELECTION".into(), message: "Selected file changed before scan".into(), path: None, retryable: false }); }
     let binding = default_rule_binding(&app)?;
     let request = ScanFileRequestV1 { request_id: uuid::Uuid::new_v4().to_string(), target_path: selected.0.to_string_lossy().into_owned(), rule_pack: binding };
-    let result: ScanResultV1 = scan_file_v1(request).await?;
+    let mut result: ScanResultV1 = scan_file_v1(request).await?;
+    result.yara = experimental_yara(selected.0.clone()).await;
     let receipt = build_receipt_v1(result).map_err(|e| ApplicationErrorV1 { code: "RECEIPT_SERIALIZATION_FAILED".into(), message: e.to_string(), path: None, retryable: false })?;
     *state.receipt.lock().unwrap() = Some(receipt.clone());
     Ok(receipt)

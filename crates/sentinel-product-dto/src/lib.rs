@@ -43,6 +43,8 @@ pub struct ScanResultV1 {
     pub held: Vec<String>,
     pub errors: Vec<ApplicationErrorV1>,
     pub rule_pack: RulePackBindingV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub yara: Option<Value>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -267,6 +269,7 @@ mod tests {
                     expected_bytes_sha256: "b".repeat(64),
                     source_path: "rules".to_owned(),
                 },
+                yara: None,
             },
             payload_sha256: "c".repeat(64),
         })
