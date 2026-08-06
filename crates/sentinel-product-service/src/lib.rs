@@ -257,6 +257,7 @@ pub async fn scan_file_v1(request: ScanFileRequestV1) -> Result<ScanResultV1, Ap
             expected_bytes_sha256: actual_digest,
             source_path: request.rule_pack.source_path,
         },
+        yara: None,
     })
 }
 
