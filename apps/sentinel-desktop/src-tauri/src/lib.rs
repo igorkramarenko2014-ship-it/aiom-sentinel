@@ -3,7 +3,7 @@ use sentinel_core::{DEFAULT_MAX_FILE_BYTES, HARD_MAX_FILE_BYTES};
 use sentinel_product_dto::{ApplicationErrorV1, CanonicalReceiptV1, FolderManifestReceiptV1, FolderProgressV1, FolderScanRuntimeDiagnosticsV1, RulePackBindingV1, ScanFileRequestV1, ScanResultV1};
 use sentinel_product_service::{build_receipt_v1, receipt_bytes, scan_file_v1, scan_folder_with_control, FolderProgressSink};
 use sentinel_product_service::container::{inspect_tar, inspect_zip, ContainerLimits};
-use sentinel_product_service::quarantine::{quarantine_file, restore_file, QuarantineRecord};
+use sentinel_product_service::quarantine::{default_root, load_records, persist_records, quarantine_file, restore_file, QuarantineRecord};
 use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -149,11 +149,13 @@ async fn inspect_selected_container_v1(selection_id: String, state: tauri::State
 fn quarantine_selected_v1(selection_id: String, confirm: bool, state: tauri::State<'_, AppState>) -> Result<Value, ApplicationErrorV1> {
     if !confirm { return Err(ApplicationErrorV1 { code: "QUARANTINE_CONFIRMATION_REQUIRED".into(), message: "Explicit confirmation is required".into(), path: None, retryable: false }); }
     let selected = state.selected.lock().unwrap().as_ref().filter(|s| s.id == selection_id).map(|s| s.canonical_path.clone()).ok_or_else(|| ApplicationErrorV1 { code: "SELECTION_NOT_FOUND".into(), message: "Unknown selection id".into(), path: None, retryable: false })?;
-    let root = std::env::temp_dir().join("aiom-sentinel-quarantine");
+    let root = default_root();
     let id = uuid::Uuid::new_v4().to_string();
     let record = quarantine_file(&selected, &root, &id).map_err(|e| ApplicationErrorV1 { code: "QUARANTINE_FAILED".into(), message: e.to_string(), path: None, retryable: false })?;
     let value = serde_json::to_value(&record).map_err(|e| ApplicationErrorV1 { code: "QUARANTINE_SERIALIZATION_FAILED".into(), message: e.to_string(), path: None, retryable: false })?;
     state.quarantine.lock().unwrap().push(record);
+    let records = state.quarantine.lock().unwrap().clone();
+    persist_records(&root, &records).map_err(|e| ApplicationErrorV1 { code: "QUARANTINE_INDEX_WRITE_FAILED".into(), message: e.to_string(), path: None, retryable: true })?;
     Ok(value)
 }
 
@@ -163,6 +165,7 @@ fn restore_quarantine_v1(id: String, state: tauri::State<'_, AppState>) -> Resul
     let index = records.iter().position(|r| r.id == id).ok_or_else(|| ApplicationErrorV1 { code: "QUARANTINE_RECORD_NOT_FOUND".into(), message: "Unknown quarantine record".into(), path: None, retryable: false })?;
     restore_file(&records[index]).map_err(|e| ApplicationErrorV1 { code: "QUARANTINE_RESTORE_FAILED".into(), message: e.to_string(), path: None, retryable: false })?;
     records.remove(index);
+    persist_records(&default_root(), &records).map_err(|e| ApplicationErrorV1 { code: "QUARANTINE_INDEX_WRITE_FAILED".into(), message: e.to_string(), path: None, retryable: true })?;
     Ok(())
 }
 
@@ -220,7 +223,7 @@ async fn export_receipt_v1(app: tauri::AppHandle, state: tauri::State<'_, AppSta
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .manage(AppState { selected: Mutex::new(None), selected_folder: Mutex::new(None), receipt: Mutex::new(None), folder_receipt: Mutex::new(None), active_scan: Arc::new(Mutex::new(None)), quarantine: Mutex::new(Vec::new()) })
+        .manage(AppState { selected: Mutex::new(None), selected_folder: Mutex::new(None), receipt: Mutex::new(None), folder_receipt: Mutex::new(None), active_scan: Arc::new(Mutex::new(None)), quarantine: Mutex::new(load_records(&default_root())) })
         .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_file_yara_v1, inspect_selected_container_v1, quarantine_selected_v1, restore_quarantine_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

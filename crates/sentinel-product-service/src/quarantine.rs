@@ -14,6 +14,27 @@ pub struct QuarantineRecord {
     pub size_bytes: u64,
 }
 
+pub fn default_root() -> PathBuf {
+    std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(std::env::temp_dir)
+        .join("Library/Application Support/AIOM Sentinel/quarantine/v1")
+}
+
+pub fn load_records(root: &Path) -> Vec<QuarantineRecord> {
+    fs::read(root.join("index.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default()
+}
+
+pub fn persist_records(root: &Path, records: &[QuarantineRecord]) -> std::io::Result<()> {
+    fs::create_dir_all(root)?;
+    let bytes =
+        serde_json::to_vec_pretty(records).map_err(|e| std::io::Error::other(e.to_string()))?;
+    fs::write(root.join("index.json"), bytes)
+}
+
 pub fn quarantine_file(source: &Path, root: &Path, id: &str) -> std::io::Result<QuarantineRecord> {
     let meta = fs::symlink_metadata(source)?;
     if !meta.is_file() || meta.file_type().is_symlink() {
