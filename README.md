@@ -9,8 +9,9 @@ earned through verification.
 ## Phase 1 state
 
 Implemented capabilities are recursive opt-in filesystem scanning, SHA-256/SHA-1/MD5, entropy,
-bounded PE metadata, local literal-rule matching, JSON evidence, timeline records, and documented
-exit codes. The Phase 1 implementation is verified on macOS in the release-candidate receipt.
+bounded PE metadata, local literal-rule matching, a Rust-native YARA-X static engine path, JSON
+evidence, timeline records, and documented exit codes. YARA-X is a verified-local production
+candidate for bounded static scans; it is not real-time endpoint protection or efficacy evidence.
 
 ## Nonclaims
 
@@ -34,6 +35,13 @@ Directory traversal is explicit:
 ```bash
 cargo run -p sentinel-cli -- scan tests/fixtures --recursive \
   --rules tests/fixtures/harmless.rules --output evidence.json
+```
+
+Rust-native YARA-X scanning is explicit and does not invoke Python:
+
+```bash
+cargo run -p sentinel-cli -- scan tests/fixtures/harmless-yara-positive.txt \
+  --yara-rules tests/fixtures/harmless.yar --yara-namespace fixture --json
 ```
 
 ## Example output

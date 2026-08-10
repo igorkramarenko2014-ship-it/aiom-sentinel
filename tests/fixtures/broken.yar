@@ -1,0 +1,2 @@
+rule BrokenFixture {
+    condition:

@@ -28,6 +28,8 @@
     "resources": {
       "../resources/rules/sentinel-default.rules": "rules/sentinel-default.rules",
       "../resources/rules/sentinel-default.rules.sha256": "rules/sentinel-default.rules.sha256"
+      ,"../resources/rules/sentinel-default.yar": "rules/sentinel-default.yar"
+      ,"../resources/rules/sentinel-default.yar.sha256": "rules/sentinel-default.yar.sha256"
     },
     "targets": "all",
     "icon": [

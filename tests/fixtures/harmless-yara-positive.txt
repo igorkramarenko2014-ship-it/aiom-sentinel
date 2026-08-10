@@ -1,0 +1,1 @@
+prefix HARMLESS_SENTINEL_YARA_X_MARKER suffix

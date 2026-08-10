@@ -9,7 +9,15 @@ use thiserror::Error;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-pub const EVIDENCE_SCHEMA_VERSION: &str = "1.1.0";
+pub const EVIDENCE_SCHEMA_VERSION: &str = "1.2.0";
+pub const PREVIOUS_EVIDENCE_SCHEMA_VERSION: &str = "1.1.0";
+
+pub fn is_supported_evidence_schema(version: &str) -> bool {
+    matches!(
+        version,
+        EVIDENCE_SCHEMA_VERSION | PREVIOUS_EVIDENCE_SCHEMA_VERSION
+    )
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -205,6 +213,72 @@ pub struct RuleMatch {
     pub severity: Severity,
     pub confidence_contribution: u8,
     pub evidence_reference: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub metadata: Vec<RuleMetadataEntry>,
+    #[serde(default)]
+    pub spans: Vec<MatchSpan>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct MatchSpan {
+    pub pattern: String,
+    pub start: u64,
+    pub end: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct RuleMetadataEntry {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct DetectionEngineIdentityV1 {
+    pub engine_id: String,
+    pub engine_version: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct RuleSetIdentityV1 {
+    pub pack_id: String,
+    pub content_sha256: String,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum EngineCoverageStateV1 {
+    Complete,
+    Partial,
+    Failed,
+    Unsupported,
+    Cancelled,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct EngineCoverageV1 {
+    pub engine: DetectionEngineIdentityV1,
+    pub ruleset: RuleSetIdentityV1,
+    pub state: EngineCoverageStateV1,
+    pub scanned_bytes: u64,
+    pub match_count: u64,
+    pub reason: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct EngineScanResultV1 {
+    pub schema_version: String,
+    pub coverage: EngineCoverageV1,
+    pub matches: Vec<RuleMatch>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EngineScanBudgetV1 {
+    pub max_scan_bytes: usize,
+    pub max_matches: usize,
+    pub timeout_ms: u64,
+    pub cancelled: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -290,6 +364,8 @@ pub struct EvidenceRecord {
     pub format_support: CapabilityState,
     pub pe_metadata: Option<PeMetadata>,
     pub rule_matches: Vec<RuleMatch>,
+    #[serde(default)]
+    pub engine_reports: Vec<EngineCoverageV1>,
     pub findings: Vec<ScanFinding>,
     pub scanner_version: String,
     pub engine_version: EngineVersion,

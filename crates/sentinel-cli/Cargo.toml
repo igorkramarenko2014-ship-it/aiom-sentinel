@@ -15,6 +15,9 @@ sentinel-core = { path = "../sentinel-core" }
 sentinel-evidence = { path = "../sentinel-evidence" }
 sentinel-rules = { path = "../sentinel-rules" }
 sentinel-scanner = { path = "../sentinel-scanner" }
+sentinel-product-service = { path = "../sentinel-product-service" }
+serde_json.workspace = true
+notify.workspace = true
 tokio.workspace = true
 uuid.workspace = true
 

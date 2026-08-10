@@ -1,0 +1,1 @@
+ordinary benign fixture with no synthetic marker

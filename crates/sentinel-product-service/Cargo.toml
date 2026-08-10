@@ -21,6 +21,8 @@ zip.workspace = true
 tar.workspace = true
 flate2.workspace = true
 notify.workspace = true
+aes-gcm = "0.10"
+libc = "0.2"
 
 [dev-dependencies]
 tempfile.workspace = true

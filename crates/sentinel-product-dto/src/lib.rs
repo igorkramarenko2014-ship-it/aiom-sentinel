@@ -2,10 +2,20 @@
 #![cfg_attr(test, allow(clippy::expect_used, clippy::unwrap_used))]
 //! Versioned product-facing DTOs. Internal scanner structs never cross this boundary.
 
+use sentinel_core::{EngineCoverageV1, FileIdentity, MatchSpan, RuleMetadataEntry};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
-pub const DTO_SCHEMA_VERSION: &str = "sentinel-product/v1";
+pub const DTO_SCHEMA_VERSION: &str = "sentinel-product/v2";
+pub const PREVIOUS_DTO_SCHEMA_VERSION: &str = "sentinel-product/v1";
+pub const WATCH_SCHEMA_VERSION: &str = "sentinel-watch/v1";
+
+pub fn validate_dto_schema(version: &str) -> Result<(), String> {
+    if version == DTO_SCHEMA_VERSION {
+        Ok(())
+    } else {
+        Err(format!("unsupported DTO schema: {version}"))
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ScanFileRequestV1 {
@@ -24,9 +34,15 @@ pub struct RulePackBindingV1 {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ScanFindingV1 {
     pub path: String,
-    pub identity: Value,
-    pub rule_id: Option<String>,
-    pub matched_evidence: Option<Value>,
+    pub identity: FileIdentity,
+    pub engine_id: String,
+    pub rule_id: String,
+    pub namespace: String,
+    pub matched_condition: String,
+    pub evidence_reference: String,
+    pub tags: Vec<String>,
+    pub metadata: Vec<RuleMetadataEntry>,
+    pub spans: Vec<MatchSpan>,
     pub confidence: Option<String>,
     pub severity: Option<String>,
 }
@@ -43,8 +59,8 @@ pub struct ScanResultV1 {
     pub held: Vec<String>,
     pub errors: Vec<ApplicationErrorV1>,
     pub rule_pack: RulePackBindingV1,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub yara: Option<Value>,
+    #[serde(default)]
+    pub engine_reports: Vec<EngineCoverageV1>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -67,6 +83,81 @@ pub struct ApplicationErrorV1 {
     pub message: String,
     pub path: Option<String>,
     pub retryable: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct WatchRequestV1 {
+    pub root: String,
+    pub rule_pack: RulePackBindingV1,
+    pub queue_capacity: usize,
+    pub debounce_ms: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum WatchEventTypeV1 {
+    Create,
+    Modify,
+    RenameIn,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum WatchResultStateV1 {
+    Match,
+    NoMatch,
+    Partial,
+    Failed,
+    Rejected,
+    Cancelled,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
+pub struct WatchCountersV1 {
+    pub accepted: u64,
+    pub coalesced: u64,
+    pub dropped: u64,
+    pub rejected: u64,
+    pub scanned: u64,
+    pub matched: u64,
+    pub failed: u64,
+    pub cancelled: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct WatchResultV1 {
+    pub schema_version: String,
+    #[serde(default)]
+    pub session_id: String,
+    pub event_id: u64,
+    #[serde(default)]
+    pub generation: u64,
+    pub event_type: WatchEventTypeV1,
+    pub path: String,
+    pub artifact_identity: Option<FileIdentity>,
+    #[serde(default)]
+    pub pre_scan_identity: Option<FileIdentity>,
+    #[serde(default)]
+    pub post_scan_identity: Option<FileIdentity>,
+    pub observed_at: String,
+    pub engine_id: String,
+    pub ruleset_id: String,
+    pub state: WatchResultStateV1,
+    pub findings: Vec<ScanFindingV1>,
+    pub coverage: Vec<EngineCoverageV1>,
+    pub failure: Option<ApplicationErrorV1>,
+    pub latency_ms: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct WatchHealthV1 {
+    pub schema_version: String,
+    pub active: bool,
+    pub root: String,
+    pub queue_capacity: usize,
+    pub queue_depth: usize,
+    pub counters: WatchCountersV1,
+    pub last_failure: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -239,9 +330,23 @@ mod tests {
     fn nullable_finding_fields_remain_null() {
         let finding = ScanFindingV1 {
             path: "fixture.txt".to_owned(),
-            identity: Value::Null,
-            rule_id: None,
-            matched_evidence: None,
+            identity: FileIdentity {
+                os_family: sentinel_core::OsFamily::Unknown,
+                platform_file_id: None,
+                volume_or_device_id: None,
+                canonical_path_sha256: "a".repeat(64),
+                size: 0,
+                change_indicator: None,
+                identity_quality: sentinel_core::IdentityQuality::PathOnly,
+            },
+            engine_id: "test".to_owned(),
+            rule_id: "rule".to_owned(),
+            namespace: "default".to_owned(),
+            matched_condition: "true".to_owned(),
+            evidence_reference: "test".to_owned(),
+            tags: vec![],
+            metadata: vec![],
+            spans: vec![],
             confidence: None,
             severity: None,
         };
@@ -269,7 +374,7 @@ mod tests {
                     expected_bytes_sha256: "b".repeat(64),
                     source_path: "rules".to_owned(),
                 },
-                yara: None,
+                engine_reports: vec![],
             },
             payload_sha256: "c".repeat(64),
         })

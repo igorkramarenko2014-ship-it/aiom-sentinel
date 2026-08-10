@@ -14,6 +14,30 @@ pub struct QuarantineRecord {
     pub size_bytes: u64,
 }
 
+#[derive(Debug, Clone)]
+pub struct QuarantineStoreV2 {
+    pub root: PathBuf,
+}
+
+impl QuarantineStoreV2 {
+    pub fn open(root: PathBuf) -> std::io::Result<Self> {
+        fs::create_dir_all(root.join("journal"))?;
+        fs::create_dir_all(root.join("staging"))?;
+        fs::create_dir_all(root.join("objects"))?;
+        fs::create_dir_all(root.join("metadata"))?;
+        fs::create_dir_all(root.join("recovery"))?;
+        fs::create_dir_all(root.join("restores"))?;
+        fs::write(root.join("version"), b"sentinel-quarantine/v2\n")?;
+        Ok(Self { root })
+    }
+    pub fn object_path(&self, id: &str) -> PathBuf {
+        self.root.join("objects").join(id)
+    }
+    pub fn journal_path(&self, id: &str) -> PathBuf {
+        self.root.join("journal").join(format!("{id}.json"))
+    }
+}
+
 pub fn default_root() -> PathBuf {
     std::env::var_os("HOME")
         .map(PathBuf::from)

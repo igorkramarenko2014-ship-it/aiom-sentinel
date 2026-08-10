@@ -4,9 +4,10 @@
 
 use arc_swap::ArcSwap;
 use sentinel_core::{
-    CanonicalPathStatus, CapabilityState, ConfidenceLevel, EVIDENCE_SCHEMA_VERSION, EngineVersion,
-    EvidenceQuality, EvidenceRecord, FileFormat, FileIdentity, IdentityQuality, OsFamily, SafePath,
-    ScanFinding, ScanRequest, ScanResult, ScannerError, Verdict,
+    CanonicalPathStatus, CapabilityState, ConfidenceLevel, EVIDENCE_SCHEMA_VERSION,
+    EngineCoverageStateV1, EngineScanBudgetV1, EngineVersion, EvidenceQuality, EvidenceRecord,
+    FileFormat, FileIdentity, IdentityQuality, OsFamily, SafePath, ScanFinding, ScanRequest,
+    ScanResult, ScannerError, Verdict,
 };
 use sentinel_hash::analyze;
 use sentinel_pe::{PeError, parse};
@@ -382,7 +383,7 @@ async fn scan_file(
         scanner: SCANNER_VERSION.to_owned(),
         rules: rules.map_or_else(
             || "disabled".to_owned(),
-            |engine| engine.version().to_owned(),
+            |engine| engine.identity().engine_version,
         ),
         pe_parser: PE_PARSER_VERSION.to_owned(),
     };
@@ -433,7 +434,36 @@ async fn scan_file(
             ),
         }
     };
-    let rule_matches = rules.map_or_else(Vec::new, |engine| engine.evaluate(&bytes));
+    let engine_evaluation = rules.map(|engine| {
+        engine.evaluate(
+            &bytes,
+            &EngineScanBudgetV1 {
+                max_scan_bytes: usize::try_from(max_file_size).unwrap_or(usize::MAX),
+                max_matches: 10_000,
+                timeout_ms: 5_000,
+                cancelled: false,
+            },
+        )
+    });
+    if let Some(evaluation) = &engine_evaluation
+        && evaluation.coverage.state != EngineCoverageStateV1::Complete
+    {
+        errors.push(format!(
+            "engine {} coverage {:?}: {}",
+            evaluation.coverage.engine.engine_id,
+            evaluation.coverage.state,
+            evaluation
+                .coverage
+                .reason
+                .as_deref()
+                .unwrap_or("unspecified")
+        ));
+    }
+    let rule_matches = engine_evaluation
+        .as_ref()
+        .map_or_else(Vec::new, |evaluation| evaluation.matches.clone());
+    let engine_reports =
+        engine_evaluation.map_or_else(Vec::new, |evaluation| vec![evaluation.coverage]);
     let findings = Vec::new();
     let (verdict, risk_score, threat_confidence) =
         derive_verdict(&rule_matches, &findings, &errors);
@@ -457,6 +487,7 @@ async fn scan_file(
         format_support,
         pe_metadata,
         rule_matches,
+        engine_reports,
         findings,
         scanner_version: SCANNER_VERSION.to_owned(),
         engine_version: context.engine_version,
@@ -649,6 +680,7 @@ fn error_record(context: RecordContext, error: String) -> EvidenceRecord {
         format_support: CapabilityState::Unsupported,
         pe_metadata: None,
         rule_matches: Vec::new(),
+        engine_reports: Vec::new(),
         findings: Vec::new(),
         scanner_version: SCANNER_VERSION.to_owned(),
         engine_version: context.engine_version,
@@ -665,7 +697,10 @@ fn error_record(context: RecordContext, error: String) -> EvidenceRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sentinel_core::{ScanLimits, ScanTarget};
+    use sentinel_core::{
+        DetectionEngineIdentityV1, EngineCoverageV1, EngineScanResultV1, RuleSetIdentityV1,
+        ScanLimits, ScanTarget,
+    };
     use sentinel_rules::LocalRuleEngine;
 
     fn activation() -> RuleSetActivationMetadata {
@@ -678,6 +713,59 @@ mod tests {
 
     fn rules(literal: &str) -> Arc<dyn RuleEngine> {
         Arc::new(LocalRuleEngine::parse(&format!("marker|synthetic|{literal}|LOW|20")).unwrap())
+    }
+
+    struct FailedEngine;
+
+    impl RuleEngine for FailedEngine {
+        fn evaluate(&self, _bytes: &[u8], _budget: &EngineScanBudgetV1) -> EngineScanResultV1 {
+            EngineScanResultV1 {
+                schema_version: "sentinel-engine-result/v1".to_owned(),
+                coverage: EngineCoverageV1 {
+                    engine: self.identity(),
+                    ruleset: self.ruleset_identity(),
+                    state: EngineCoverageStateV1::Failed,
+                    scanned_bytes: 0,
+                    match_count: 0,
+                    reason: Some("injected engine failure".to_owned()),
+                },
+                matches: Vec::new(),
+            }
+        }
+
+        fn identity(&self) -> DetectionEngineIdentityV1 {
+            DetectionEngineIdentityV1 {
+                engine_id: "failed-test-engine".to_owned(),
+                engine_version: "1".to_owned(),
+            }
+        }
+
+        fn ruleset_identity(&self) -> RuleSetIdentityV1 {
+            RuleSetIdentityV1 {
+                pack_id: "failed-test-pack".to_owned(),
+                content_sha256: "f".repeat(64),
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn engine_failure_cannot_become_clean() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("sample.txt");
+        std::fs::write(&path, b"benign bytes").unwrap();
+        let request = ScanRequest {
+            scan_id: Uuid::nil(),
+            target: ScanTarget(path),
+            recursive: false,
+            limits: ScanLimits::default(),
+        };
+        let result = scan(&request, Some(Arc::new(FailedEngine))).await.unwrap();
+        assert_eq!(result.records[0].verdict, Verdict::ScanError);
+        assert_eq!(
+            result.records[0].engine_reports[0].state,
+            EngineCoverageStateV1::Failed
+        );
+        assert!(result.records[0].errors[0].contains("injected engine failure"));
     }
 
     #[test]

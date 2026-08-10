@@ -3,9 +3,10 @@
 use clap::{Parser, Subcommand};
 use sentinel_core::{ScanLimits, ScanRequest, ScanTarget, Verdict};
 use sentinel_evidence::EvidenceBundle;
-use sentinel_rules::LocalRuleEngine;
+use sentinel_rules::{LocalRuleEngine, YaraXEngine, YaraXRuleSource};
 use sentinel_scanner::scan;
-use std::{path::PathBuf, process::ExitCode, sync::Arc};
+use std::time::Duration;
+use std::{collections::HashMap, path::PathBuf, process::ExitCode, sync::Arc};
 use uuid::Uuid;
 
 #[derive(Debug, Parser)]
@@ -31,8 +32,22 @@ enum Command {
         output: Option<PathBuf>,
         #[arg(long)]
         rules: Option<PathBuf>,
+        /// Compile and scan with the Rust-native YARA-X engine.
+        #[arg(long, conflicts_with = "rules")]
+        yara_rules: Option<PathBuf>,
+        #[arg(long, default_value = "default")]
+        yara_namespace: String,
         #[arg(long, default_value_t = 256)]
         max_file_mib: u64,
+    },
+    Watch {
+        directory: PathBuf,
+        #[arg(long)]
+        yara_rules: PathBuf,
+        #[arg(long, default_value = "default")]
+        yara_namespace: String,
+        #[arg(long)]
+        json: bool,
     },
     Version,
 }
@@ -54,12 +69,100 @@ async fn run(cli: Cli) -> Result<u8, (u8, String)> {
             println!("sentinel {}", env!("CARGO_PKG_VERSION"));
             Ok(0)
         }
+        Command::Watch {
+            directory,
+            yara_rules,
+            yara_namespace,
+            json,
+        } => {
+            if !directory.is_dir() {
+                return Err((
+                    3,
+                    format!("watch directory does not exist: {}", directory.display()),
+                ));
+            }
+            let source = std::fs::read_to_string(&yara_rules)
+                .map_err(|e| (3, format!("failed to read YARA rules: {e}")))?;
+            let engine = Arc::new(
+                YaraXEngine::compile(
+                    &yara_rules.to_string_lossy(),
+                    &[YaraXRuleSource {
+                        namespace: &yara_namespace,
+                        source: &source,
+                    }],
+                )
+                .map_err(|e| (3, e.to_string()))?,
+            ) as Arc<dyn sentinel_rules::RuleEngine>;
+            let watcher =
+                sentinel_product_service::watcher::FileWatcher::start_root(directory.clone())
+                    .map_err(|e| (3, e.to_string()))?;
+            let (intake, rx, counters) =
+                sentinel_product_service::watcher::BoundedIntake::new_with_root(
+                    128,
+                    Duration::from_millis(300),
+                    directory.clone(),
+                );
+            println!(
+                "{{\"schema_version\":\"sentinel-watch/v1\",\"state\":\"READY\",\"root\":{}}}",
+                serde_json::to_string(&directory.to_string_lossy()).unwrap()
+            );
+            let stop = tokio::signal::ctrl_c();
+            tokio::pin!(stop);
+            let mut generation = 0u64;
+            let mut snapshot: HashMap<PathBuf, (u64, Option<std::time::SystemTime>)> =
+                HashMap::new();
+            loop {
+                tokio::select! {
+                    _ = &mut stop => break,
+                    _ = tokio::time::sleep(Duration::from_millis(25)) => {
+                        while let Some(event) = watcher.try_next() { match event { Ok(event) => { eprintln!("watch source_event kind={:?} paths={:?}", event.kind, event.paths); if sentinel_product_service::watcher::event_kind(&event.kind) { for path in event.paths { generation += 1; let _ = intake.submit(path, event.kind, generation); } } }, Err(error) => eprintln!("watch source_error={error}"), } }
+                        if let Ok(entries) = std::fs::read_dir(&directory) {
+                            for entry in entries.flatten() {
+                                let path = entry.path();
+                                if path.is_symlink() || !path.is_file() { continue; }
+                                if let Ok(meta) = std::fs::symlink_metadata(&path) {
+                                    let identity = (meta.len(), meta.modified().ok());
+                                    if snapshot.get(&path) != Some(&identity) {
+                                        snapshot.insert(path.clone(), identity);
+                                        generation += 1;
+                                        let _ = intake.submit(path, notify::EventKind::Create(notify::event::CreateKind::File), generation);
+                                    }
+                                }
+                            }
+                        }
+                        while let Ok(item) = rx.try_recv() {
+                            let started = std::time::Instant::now();
+                            let result = sentinel_product_service::watcher::stable_file(&item.path, started + Duration::from_millis(500)).and_then(|_| std::fs::read(&item.path));
+                            let (state, matched, failure) = match result { Ok(_bytes) => { let request = sentinel_core::ScanRequest { scan_id: Uuid::new_v4(), target: sentinel_core::ScanTarget(item.path.clone()), recursive: false, limits: ScanLimits::default() }; match scan(&request, Some(engine.clone())).await { Ok(bundle) => { let matched = bundle.records.iter().any(|r| matches!(r.verdict, Verdict::Match | Verdict::Suspicious)); (if matched { "MATCH" } else { "NO_MATCH" }, matched, None) }, Err(e) => ("FAILED", false, Some(e.to_string())) } }, Err(e) => ("FAILED", false, Some(e.to_string())) };
+                            if matched { counters.lock().unwrap().matched += 1; } counters.lock().unwrap().scanned += 1;
+                            let line = serde_json::json!({"schema_version":"sentinel-watch/v1","event_id":item.id,"event_type":format!("{:?}", item.kind),"path":item.path,"state":state,"failure":failure,"latency_ms":started.elapsed().as_millis()});
+                            if json { println!("{}", line); } else { println!("watch state={} path={}", state, item.path.display()); }
+                        }
+                    }
+                }
+            }
+            let c = counters.lock().unwrap().clone();
+            eprintln!(
+                "watch summary accepted={} coalesced={} dropped={} rejected={} scanned={} matched={} failed={} cancelled={}",
+                c.accepted,
+                c.coalesced,
+                c.dropped,
+                c.rejected,
+                c.scanned,
+                c.matched,
+                c.failed,
+                c.cancelled
+            );
+            Ok(0)
+        }
         Command::Scan {
             path,
             recursive,
             json,
             output,
             rules,
+            yara_rules,
+            yara_namespace,
             max_file_mib,
         } => {
             if max_file_mib == 0 {
@@ -77,8 +180,8 @@ async fn run(cli: Cli) -> Result<u8, (u8, String)> {
                     "directory scans require the explicit --recursive flag".to_owned(),
                 ));
             }
-            let rule_engine = match rules {
-                Some(rule_path) => {
+            let rule_engine = match (rules, yara_rules) {
+                (Some(rule_path), None) => {
                     let source = std::fs::read_to_string(&rule_path).map_err(|error| {
                         (
                             3,
@@ -92,7 +195,34 @@ async fn run(cli: Cli) -> Result<u8, (u8, String)> {
                         LocalRuleEngine::parse(&source).map_err(|error| (3, error.to_string()))?,
                     ) as Arc<dyn sentinel_rules::RuleEngine>)
                 }
-                None => None,
+                (None, Some(rule_path)) => {
+                    let source = std::fs::read_to_string(&rule_path).map_err(|error| {
+                        (
+                            3,
+                            format!(
+                                "failed to read YARA-X rules {}: {error}",
+                                rule_path.to_string_lossy()
+                            ),
+                        )
+                    })?;
+                    Some(Arc::new(
+                        YaraXEngine::compile(
+                            &rule_path.to_string_lossy(),
+                            &[YaraXRuleSource {
+                                namespace: &yara_namespace,
+                                source: &source,
+                            }],
+                        )
+                        .map_err(|error| (3, error.to_string()))?,
+                    ) as Arc<dyn sentinel_rules::RuleEngine>)
+                }
+                (None, None) => None,
+                (Some(_), Some(_)) => {
+                    return Err((
+                        3,
+                        "--rules and --yara-rules are mutually exclusive".to_owned(),
+                    ));
+                }
             };
             let request = ScanRequest {
                 scan_id: Uuid::new_v4(),

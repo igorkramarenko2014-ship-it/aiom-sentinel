@@ -77,6 +77,6 @@ mod tests {
             traversal_errors: vec![],
         };
         let value: serde_json::Value = serde_json::from_str(&bundle.to_json().unwrap()).unwrap();
-        assert_eq!(value["schema_version"], "1.1.0");
+        assert_eq!(value["schema_version"], "1.2.0");
     }
 }

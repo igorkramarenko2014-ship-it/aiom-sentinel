@@ -1,7 +1,7 @@
 use sentinel_product_dto::DTO_SCHEMA_VERSION;
 use sentinel_core::{DEFAULT_MAX_FILE_BYTES, HARD_MAX_FILE_BYTES};
-use sentinel_product_dto::{ApplicationErrorV1, CanonicalReceiptV1, FolderManifestReceiptV1, FolderProgressV1, FolderScanRuntimeDiagnosticsV1, RulePackBindingV1, ScanFileRequestV1, ScanResultV1};
-use sentinel_product_service::{build_receipt_v1, receipt_bytes, scan_file_v1, scan_folder_with_control, FolderProgressSink};
+use sentinel_product_dto::{ApplicationErrorV1, CanonicalReceiptV1, FolderManifestReceiptV1, FolderProgressV1, FolderScanRuntimeDiagnosticsV1, RulePackBindingV1, ScanFileRequestV1, ScanResultV1, WatchHealthV1, WatchCountersV1, WATCH_SCHEMA_VERSION};
+use sentinel_product_service::{build_receipt_v1, receipt_bytes, scan_file_yara_x_v1, scan_folder_with_control, FolderProgressSink};
 use sentinel_product_service::container::{inspect_tar, inspect_zip, ContainerLimits};
 use sentinel_product_service::quarantine::{default_root, load_records, persist_records, quarantine_file, restore_file, QuarantineRecord};
 use sentinel_product_service::watcher::{FileWatcher, WatchProfile};
@@ -9,13 +9,14 @@ use sentinel_product_service::pack_update::{stage as stage_pack, validate_bundle
 use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::{path::PathBuf, sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}};
+use std::{path::PathBuf, sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, time::Duration};
 use tauri_plugin_dialog::DialogExt;
 use tauri::{Manager, Emitter};
 
 struct SelectedFile { id: String, canonical_path: PathBuf, size_bytes: u64, digest: String }
 struct ActiveFolderScan { request_id: String, cancellation_token: Arc<AtomicBool>, latest_progress: Option<FolderProgressV1>, cancellation_requested: bool, terminal_emitted: bool, diagnostics: FolderScanRuntimeDiagnosticsV1 }
-struct AppState { selected: Mutex<Option<SelectedFile>>, selected_folder: Mutex<Option<(String, PathBuf)>>, receipt: Mutex<Option<CanonicalReceiptV1>>, folder_receipt: Mutex<Option<FolderManifestReceiptV1>>, active_scan: Arc<Mutex<Option<ActiveFolderScan>>>, quarantine: Mutex<Vec<QuarantineRecord>>, watcher_stop: Mutex<Option<Arc<AtomicBool>>>, active_pack: Mutex<Option<PackCandidate>>, previous_pack: Mutex<Option<PackCandidate>> }
+struct WatcherSession { stop: Arc<AtomicBool>, collector: Option<std::thread::JoinHandle<()>>, worker: Option<std::thread::JoinHandle<()>>, health: Arc<Mutex<WatchHealthV1>> }
+struct AppState { selected: Mutex<Option<SelectedFile>>, selected_folder: Mutex<Option<(String, PathBuf)>>, receipt: Mutex<Option<CanonicalReceiptV1>>, folder_receipt: Mutex<Option<FolderManifestReceiptV1>>, active_scan: Arc<Mutex<Option<ActiveFolderScan>>>, quarantine: Mutex<Vec<QuarantineRecord>>, watcher_stop: Mutex<Option<Arc<AtomicBool>>>, watcher_health: Mutex<Option<WatchHealthV1>>, watcher_session: Mutex<Option<WatcherSession>>, active_pack: Mutex<Option<PackCandidate>>, previous_pack: Mutex<Option<PackCandidate>> }
 struct TauriProgressSink(tauri::AppHandle, Arc<Mutex<Option<ActiveFolderScan>>>);
 impl FolderProgressSink for TauriProgressSink { fn emit(&self, progress: FolderProgressV1) -> Result<(), String> { let result = self.0.emit("sentinel://folder-progress-v1", progress.clone()).map_err(|e| e.to_string()); if let Ok(mut active) = self.1.lock() { if let Some(scan) = active.as_mut() { if scan.request_id == progress.request_id && !scan.terminal_emitted { scan.latest_progress = Some(progress.clone()); scan.cancellation_requested = progress.cancellation_requested; scan.terminal_emitted = progress.terminal; if let Err(error) = &result { scan.diagnostics.progress_delivery_error_count += 1; scan.diagnostics.last_progress_delivery_error = Some(error.clone()); scan.diagnostics.terminal_progress_delivery_failed |= progress.terminal; } } } } result } }
 
@@ -94,7 +95,18 @@ fn default_rule_binding(app: &tauri::AppHandle) -> Result<RulePackBindingV1, App
     Ok(RulePackBindingV1 { pack_id: "sentinel-default".into(), expected_bytes_sha256: digest, source_path: source.to_string_lossy().into_owned() })
 }
 
-async fn experimental_yara(path: PathBuf) -> Option<Value> {
+fn default_yara_x_binding(app: &tauri::AppHandle) -> Result<RulePackBindingV1, ApplicationErrorV1> {
+    let resource_dir = app.path().resource_dir().map_err(|e| ApplicationErrorV1 { code: "RULE_PACK_UNAVAILABLE".into(), message: e.to_string(), path: None, retryable: false })?;
+    let source = resource_dir.join("rules/sentinel-default.yar");
+    let sidecar = resource_dir.join("rules/sentinel-default.yar.sha256");
+    let bytes = std::fs::read(&source).map_err(|e| ApplicationErrorV1 { code: "RULE_PACK_UNAVAILABLE".into(), message: e.to_string(), path: None, retryable: false })?;
+    let digest = hex::encode(Sha256::digest(&bytes));
+    let declared = std::fs::read_to_string(&sidecar).map_err(|e| ApplicationErrorV1 { code: "RULE_PACK_UNAVAILABLE".into(), message: e.to_string(), path: None, retryable: false })?.trim().to_owned();
+    if declared != digest { return Err(ApplicationErrorV1 { code: "RULE_PACK_IDENTITY_MISMATCH".into(), message: "Bundled YARA-X rule-pack digest mismatch".into(), path: None, retryable: false }); }
+    Ok(RulePackBindingV1 { pack_id: "sentinel-default-yara-x".into(), expected_bytes_sha256: digest, source_path: source.to_string_lossy().into_owned() })
+}
+
+async fn experimental_legacy_yara(path: PathBuf) -> Option<Value> {
     if let (Some(script), Some(registry)) = (std::env::var_os("AIOM_SENTINEL_YARA_MULTI_SCRIPT"), std::env::var_os("AIOM_SENTINEL_YARA_PACKS_JSON")) {
         let python = std::env::var_os("AIOM_SENTINEL_YARA_PYTHON")?;
         return tokio::task::spawn_blocking(move || {
@@ -118,10 +130,9 @@ async fn scan_selected_file_v1(app: tauri::AppHandle, selection_id: String, stat
     let metadata = std::fs::metadata(&selected.0).map_err(|e| ApplicationErrorV1 { code: "FILE_CHANGED_SINCE_SELECTION".into(), message: e.to_string(), path: None, retryable: false })?;
     let current = hex::encode(Sha256::digest(std::fs::read(&selected.0).map_err(|e| ApplicationErrorV1 { code: "FILE_CHANGED_SINCE_SELECTION".into(), message: e.to_string(), path: None, retryable: false })?));
     if metadata.len() != selected.1 || current != selected.2 { return Err(ApplicationErrorV1 { code: "FILE_CHANGED_SINCE_SELECTION".into(), message: "Selected file changed before scan".into(), path: None, retryable: false }); }
-    let binding = default_rule_binding(&app)?;
+    let binding = default_yara_x_binding(&app)?;
     let request = ScanFileRequestV1 { request_id: uuid::Uuid::new_v4().to_string(), target_path: selected.0.to_string_lossy().into_owned(), rule_pack: binding };
-    let mut result: ScanResultV1 = scan_file_v1(request).await?;
-    result.yara = experimental_yara(selected.0.clone()).await;
+    let result: ScanResultV1 = scan_file_yara_x_v1(request).await?;
     let receipt = build_receipt_v1(result).map_err(|e| ApplicationErrorV1 { code: "RECEIPT_SERIALIZATION_FAILED".into(), message: e.to_string(), path: None, retryable: false })?;
     *state.receipt.lock().unwrap() = Some(receipt.clone());
     Ok(receipt)
@@ -133,7 +144,7 @@ async fn scan_selected_file_yara_v1(selection_id: String, state: tauri::State<'_
         return Ok(serde_json::json!({"status":"UNAVAILABLE","errors":[{"code":"YARA_DISABLED","message":"Experimental YARA is disabled"}]}));
     }
     let path = state.selected.lock().unwrap().as_ref().filter(|selected| selected.id == selection_id).map(|selected| selected.canonical_path.clone()).ok_or_else(|| ApplicationErrorV1 { code: "SELECTION_NOT_FOUND".into(), message: "Unknown selection id".into(), path: None, retryable: false })?;
-    Ok(experimental_yara(path).await.unwrap_or_else(|| serde_json::json!({"status":"UNAVAILABLE","errors":[{"code":"YARA_UNAVAILABLE","message":"YARA sidecar did not return a receipt"}]})))
+    Ok(experimental_legacy_yara(path).await.unwrap_or_else(|| serde_json::json!({"status":"UNAVAILABLE","errors":[{"code":"YARA_UNAVAILABLE","message":"Experimental legacy YARA sidecar did not return a receipt"}]})))
 }
 
 #[tauri::command]
@@ -172,17 +183,58 @@ fn restore_quarantine_v1(id: String, state: tauri::State<'_, AppState>) -> Resul
 }
 
 #[tauri::command]
-fn start_watcher_v1(profile: String, app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(), ApplicationErrorV1> {
+fn start_watcher_v1(profile: String, _app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(), ApplicationErrorV1> {
     if state.watcher_stop.lock().unwrap().is_some() { return Err(ApplicationErrorV1 { code: "WATCHER_ALREADY_ACTIVE".into(), message: "A watcher is already active".into(), path: None, retryable: true }); }
     let profile = match profile.as_str() { "DOWNLOADS_TRIAGE" => WatchProfile::Downloads, "PERSISTENCE_MACOS" => WatchProfile::PersistenceMacos, _ => return Err(ApplicationErrorV1 { code: "WATCHER_PROFILE_INVALID".into(), message: "Unknown watcher profile".into(), path: None, retryable: false }) };
     let watcher = FileWatcher::start(profile).map_err(|e| ApplicationErrorV1 { code: "WATCHER_START_FAILED".into(), message: e.to_string(), path: None, retryable: true })?;
     let stop = Arc::new(AtomicBool::new(false)); *state.watcher_stop.lock().unwrap() = Some(stop.clone());
-    std::thread::spawn(move || { while !stop.load(Ordering::SeqCst) { if let Some(event) = watcher.try_next() { let _ = app.emit("sentinel://watcher-event-v1", serde_json::json!({"profile": profile as u8, "event": format!("{:?}", event)})); } else { std::thread::sleep(std::time::Duration::from_millis(100)); } } });
+    *state.watcher_health.lock().unwrap() = Some(WatchHealthV1 { schema_version: WATCH_SCHEMA_VERSION.into(), active: true, root: format!("{:?}", profile), queue_capacity: 256, queue_depth: 0, counters: WatchCountersV1::default(), last_failure: None });
+    std::thread::spawn(move || { while !stop.load(Ordering::SeqCst) { if watcher.try_next().is_some() { /* legacy raw events are intentionally not canonical */ } else { std::thread::sleep(std::time::Duration::from_millis(100)); } } });
     Ok(())
 }
 
 #[tauri::command]
-fn stop_watcher_v1(state: tauri::State<'_, AppState>) -> Result<(), ApplicationErrorV1> { if let Some(stop) = state.watcher_stop.lock().unwrap().take() { stop.store(true, Ordering::SeqCst); } Ok(()) }
+fn stop_watcher_v1(state: tauri::State<'_, AppState>) -> Result<(), ApplicationErrorV1> {
+    if let Some(mut session) = state.watcher_session.lock().unwrap().take() {
+        session.stop.store(true, Ordering::SeqCst);
+        if let Some(handle) = session.collector.take() { let _ = handle.join(); }
+        if let Some(handle) = session.worker.take() { let _ = handle.join(); }
+        *state.watcher_health.lock().unwrap() = Some(session.health.lock().unwrap().clone());
+    }
+    if let Some(stop) = state.watcher_stop.lock().unwrap().take() {
+        stop.store(true, Ordering::SeqCst);
+    }
+    if let Some(health) = state.watcher_health.lock().unwrap().as_mut() {
+        health.active = false;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn get_watch_status_v1(state: tauri::State<'_, AppState>) -> WatchHealthV1 {
+    state.watcher_health.lock().unwrap().clone().unwrap_or(WatchHealthV1 { schema_version: WATCH_SCHEMA_VERSION.into(), active: false, root: String::new(), queue_capacity: 256, queue_depth: 0, counters: WatchCountersV1::default(), last_failure: None })
+}
+
+#[tauri::command]
+#[allow(clippy::possible_missing_else, clippy::clone_on_copy)]
+async fn start_watch_v1(root: String, rules_path: String, namespace: String, app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<WatchHealthV1, ApplicationErrorV1> {
+    if state.watcher_session.lock().unwrap().is_some() { return Err(ApplicationErrorV1 { code: "WATCHER_ALREADY_ACTIVE".into(), message: "A watcher session is already active".into(), path: None, retryable: true }); }
+    let root = PathBuf::from(root).canonicalize().map_err(|e| ApplicationErrorV1 { code: "WATCH_ROOT_INVALID".into(), message: e.to_string(), path: None, retryable: false })?;
+    let meta = std::fs::symlink_metadata(&root).map_err(|e| ApplicationErrorV1 { code: "WATCH_ROOT_INVALID".into(), message: e.to_string(), path: None, retryable: false })?;
+    if !meta.is_dir() || meta.file_type().is_symlink() { return Err(ApplicationErrorV1 { code: "WATCH_ROOT_INVALID".into(), message: "watch root must be a regular directory".into(), path: Some(root.display().to_string()), retryable: false }); }
+    let source = std::fs::read_to_string(&rules_path).map_err(|e| ApplicationErrorV1 { code: "RULES_INVALID".into(), message: e.to_string(), path: Some(rules_path.clone()), retryable: false })?;
+    sentinel_rules::YaraXEngine::compile(&rules_path, &[sentinel_rules::YaraXRuleSource { namespace: &namespace, source: &source }]).map_err(|e| ApplicationErrorV1 { code: "RULES_INVALID".into(), message: e.to_string(), path: Some(rules_path.clone()), retryable: false })?;
+    let rules_digest = hex::encode(Sha256::digest(source.as_bytes()));
+    let watcher = FileWatcher::start_root(root.clone()).map_err(|e| ApplicationErrorV1 { code: "WATCHER_START_FAILED".into(), message: e.to_string(), path: None, retryable: true })?;
+    let (intake, rx, counters) = sentinel_product_service::watcher::BoundedIntake::new_with_root(128, Duration::from_millis(300), root.clone());
+    let stop = Arc::new(AtomicBool::new(false));
+    let health = Arc::new(Mutex::new(WatchHealthV1 { schema_version: WATCH_SCHEMA_VERSION.into(), active: true, root: root.display().to_string(), queue_capacity: 128, queue_depth: 0, counters: WatchCountersV1::default(), last_failure: None }));
+    let collector_stop = stop.clone(); let collector_health = health.clone();
+    let collector = std::thread::spawn(move || { while !collector_stop.load(Ordering::SeqCst) { if let Some(Ok(event)) = watcher.try_next() { if sentinel_product_service::watcher::event_kind(&event.kind) { for path in event.paths { let _ = intake.submit(path, event.kind.clone(), 1); } } } else { std::thread::sleep(Duration::from_millis(25)); } let c = counters.lock().unwrap().clone(); if let Ok(mut h) = collector_health.lock() { h.counters.accepted=c.accepted; h.counters.coalesced=c.coalesced; h.counters.dropped=c.dropped; h.counters.rejected=c.rejected; } } });
+    let worker_stop = stop.clone(); let worker_health = health.clone(); let worker_app = app.clone(); let worker_rules = rules_path.clone();
+    let worker = std::thread::spawn(move || { let runtime = match tokio::runtime::Runtime::new() { Ok(runtime) => runtime, Err(error) => { if let Ok(mut h)=worker_health.lock(){ h.active=false; h.last_failure=Some(error.to_string()); } return; } }; while !worker_stop.load(Ordering::SeqCst) { match rx.recv_timeout(Duration::from_millis(50)) { Ok(item) => { let binding=RulePackBindingV1 { pack_id: "tauri-watch".into(), expected_bytes_sha256: rules_digest.clone(), source_path: worker_rules.clone() }; let request=ScanFileRequestV1 { request_id: uuid::Uuid::new_v4().to_string(), target_path:item.path.display().to_string(), rule_pack:binding }; let result=runtime.block_on(scan_file_yara_x_v1(request)); let watch_result = match result { Ok(scan) => sentinel_product_dto::WatchResultV1 { schema_version: WATCH_SCHEMA_VERSION.into(), session_id: String::new(), event_id:item.id, generation:item.generation, event_type: sentinel_product_dto::WatchEventTypeV1::Modify, path:item.path.display().to_string(), artifact_identity:None, pre_scan_identity:None, post_scan_identity:None, observed_at: format!("{:?}", std::time::SystemTime::now()), engine_id:"yara-x".into(), ruleset_id:rules_digest.clone(), state: if scan.finding_count>0 { sentinel_product_dto::WatchResultStateV1::Match } else { sentinel_product_dto::WatchResultStateV1::NoMatch }, findings:scan.findings, coverage:scan.engine_reports, failure:None, latency_ms:0 }, Err(error) => sentinel_product_dto::WatchResultV1 { schema_version: WATCH_SCHEMA_VERSION.into(), session_id:String::new(), event_id:item.id, generation:item.generation, event_type:sentinel_product_dto::WatchEventTypeV1::Modify, path:item.path.display().to_string(), artifact_identity:None, pre_scan_identity:None, post_scan_identity:None, observed_at:String::new(), engine_id:"yara-x".into(), ruleset_id:rules_digest.clone(), state:sentinel_product_dto::WatchResultStateV1::Failed, findings:Vec::new(), coverage:Vec::new(), failure:Some(error), latency_ms:0 } }; if let Ok(mut h)=worker_health.lock() { h.counters.scanned+=1; if matches!(watch_result.state, sentinel_product_dto::WatchResultStateV1::Match) { h.counters.matched+=1; } if matches!(watch_result.state, sentinel_product_dto::WatchResultStateV1::Failed) { h.counters.failed+=1; } } let _=worker_app.emit("sentinel://watch-result-v1", watch_result); }, Err(std::sync::mpsc::RecvTimeoutError::Timeout)=>{}, Err(_)=>break } } if let Ok(mut h)=worker_health.lock(){h.active=false;} });
+    let status = health.lock().unwrap().clone(); *state.watcher_session.lock().unwrap() = Some(WatcherSession { stop, collector: Some(collector), worker: Some(worker), health: health.clone() }); *state.watcher_health.lock().unwrap() = Some(status.clone()); Ok(status)
+}
 
 #[tauri::command]
 fn optional_engine_status_v1() -> Value { serde_json::json!({"capa":{"status":"UNAVAILABLE","reason":"optional runtime not installed"},"yara_x":{"status":"UNAVAILABLE","reason":"optional runtime not installed"}}) }
@@ -253,8 +305,34 @@ async fn export_receipt_v1(app: tauri::AppHandle, state: tauri::State<'_, AppSta
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .manage(AppState { selected: Mutex::new(None), selected_folder: Mutex::new(None), receipt: Mutex::new(None), folder_receipt: Mutex::new(None), active_scan: Arc::new(Mutex::new(None)), quarantine: Mutex::new(load_records(&default_root())), watcher_stop: Mutex::new(None), active_pack: Mutex::new(None), previous_pack: Mutex::new(None) })
-        .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_file_yara_v1, inspect_selected_container_v1, inspect_metadata_container_v1, quarantine_selected_v1, restore_quarantine_v1, start_watcher_v1, stop_watcher_v1, optional_engine_status_v1, stage_pack_v1, activate_pack_v1, rollback_pack_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
+        .manage(AppState { selected: Mutex::new(None), selected_folder: Mutex::new(None), receipt: Mutex::new(None), folder_receipt: Mutex::new(None), active_scan: Arc::new(Mutex::new(None)), quarantine: Mutex::new(load_records(&default_root())), watcher_stop: Mutex::new(None), watcher_health: Mutex::new(None), watcher_session: Mutex::new(None), active_pack: Mutex::new(None), previous_pack: Mutex::new(None) })
+        .invoke_handler(tauri::generate_handler![get_product_status_v1, select_file_v1, select_folder_v1, scan_selected_file_v1, scan_selected_file_yara_v1, inspect_selected_container_v1, inspect_metadata_container_v1, quarantine_selected_v1, restore_quarantine_v1, start_watch_v1, start_watcher_v1, stop_watcher_v1, get_watch_status_v1, optional_engine_status_v1, stage_pack_v1, activate_pack_v1, rollback_pack_v1, scan_selected_folder_v1, cancel_folder_scan_v1, reset_active_case_v1, export_receipt_v1])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sentinel_core::EngineCoverageStateV1;
+    use sentinel_product_service::scan_file_yara_x_v1;
+
+    #[tokio::test]
+    async fn backend_yara_x_contract_serializes_typed_result() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let target = dir.path().join("fixture.txt");
+        let rules = dir.path().join("fixture.yar");
+        std::fs::write(&target, b"HARMLESS_SENTINEL_YARA_X_MARKER").expect("target");
+        std::fs::write(&rules, r#"rule BackendMarker : synthetic { strings: $a = "HARMLESS_SENTINEL_YARA_X_MARKER" condition: $a }"#).expect("rules");
+        let digest = hex::encode(Sha256::digest(std::fs::read(&rules).expect("rules read")));
+        let result = scan_file_yara_x_v1(ScanFileRequestV1 {
+            request_id: uuid::Uuid::new_v4().to_string(),
+            target_path: target.to_string_lossy().into_owned(),
+            rule_pack: RulePackBindingV1 { pack_id: "backend-yara-x".into(), expected_bytes_sha256: digest, source_path: rules.to_string_lossy().into_owned() },
+        }).await.expect("scan");
+        let encoded = serde_json::to_value(&result).expect("typed DTO serializes");
+        assert_eq!(result.engine_reports[0].state, EngineCoverageStateV1::Complete);
+        assert_eq!(encoded["findings"][0]["engine_id"], "yara-x");
+        assert!(encoded.get("yara").is_none());
+    }
 }

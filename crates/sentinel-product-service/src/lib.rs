@@ -9,9 +9,8 @@ use sentinel_product_dto::{
     FolderScanResultV1, FolderScanRuntimeDiagnosticsV1, FolderScanStateV1, RulePackBindingV1,
     ScanFileRequestV1, ScanFindingV1, ScanResultV1, ScanStateV1,
 };
-use sentinel_rules::LocalRuleEngine;
+use sentinel_rules::{LocalRuleEngine, RuleEngine, YaraXEngine, YaraXRuleSource};
 use sentinel_scanner::scan;
-use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{
     path::{Path, PathBuf},
@@ -23,9 +22,11 @@ use std::{
 use thiserror::Error;
 use uuid::Uuid;
 
+pub mod audit_policy;
 pub mod container;
 pub mod pack_update;
 pub mod quarantine;
+pub mod transactional;
 pub mod watcher;
 
 pub trait FolderProgressSink: Send + Sync {
@@ -178,6 +179,21 @@ impl ProductServiceError {
 
 /// Recompute rule-pack bytes immediately before the scan and refuse stale identity.
 pub async fn scan_file_v1(request: ScanFileRequestV1) -> Result<ScanResultV1, ApplicationErrorV1> {
+    scan_file_with_engine_v1(request, false).await
+}
+
+/// Production-candidate Rust-native YARA-X path. The experimental Python edge
+/// is intentionally not called from this function.
+pub async fn scan_file_yara_x_v1(
+    request: ScanFileRequestV1,
+) -> Result<ScanResultV1, ApplicationErrorV1> {
+    scan_file_with_engine_v1(request, true).await
+}
+
+async fn scan_file_with_engine_v1(
+    request: ScanFileRequestV1,
+    yara_x: bool,
+) -> Result<ScanResultV1, ApplicationErrorV1> {
     let request_id = Uuid::parse_str(&request.request_id)
         .map_err(|error| ProductServiceError::InvalidRequestId(error.to_string()))
         .map_err(|error| error.application_error(Some(request.target_path.clone())))?;
@@ -196,16 +212,36 @@ pub async fn scan_file_v1(request: ScanFileRequestV1) -> Result<ScanResultV1, Ap
     let source_text = String::from_utf8(source)
         .map_err(|error| ProductServiceError::RulePackParse(error.to_string()))
         .map_err(|error| error.application_error(Some(request.rule_pack.source_path.clone())))?;
-    let rules = LocalRuleEngine::parse(&source_text)
-        .map_err(|error| ProductServiceError::RulePackParse(error.to_string()))
-        .map_err(|error| error.application_error(Some(request.rule_pack.source_path.clone())))?;
+    let rules: Arc<dyn RuleEngine> = if yara_x {
+        Arc::new(
+            YaraXEngine::compile(
+                &request.rule_pack.pack_id,
+                &[YaraXRuleSource {
+                    namespace: "product",
+                    source: &source_text,
+                }],
+            )
+            .map_err(|error| ProductServiceError::RulePackParse(error.to_string()))
+            .map_err(|error| {
+                error.application_error(Some(request.rule_pack.source_path.clone()))
+            })?,
+        )
+    } else {
+        Arc::new(
+            LocalRuleEngine::parse(&source_text)
+                .map_err(|error| ProductServiceError::RulePackParse(error.to_string()))
+                .map_err(|error| {
+                    error.application_error(Some(request.rule_pack.source_path.clone()))
+                })?,
+        )
+    };
     let core_request = ScanRequest {
         scan_id: request_id,
         target: ScanTarget(request.target_path.clone().into()),
         recursive: false,
         limits: ScanLimits::default(),
     };
-    let result = scan(&core_request, Some(Arc::new(rules)))
+    let result = scan(&core_request, Some(rules))
         .await
         .map_err(|error| ProductServiceError::Scan(error.to_string()))
         .map_err(|error| error.application_error(Some(request.target_path.clone())))?;
@@ -213,6 +249,7 @@ pub async fn scan_file_v1(request: ScanFileRequestV1) -> Result<ScanResultV1, Ap
     let mut held = Vec::new();
     let mut errors = result.traversal_errors;
     let mut processed_count = 0_u64;
+    let mut engine_reports = Vec::new();
     for record in result.records {
         processed_count = processed_count.saturating_add(1);
         if record.verdict == sentinel_core::Verdict::ScanError {
@@ -221,15 +258,23 @@ pub async fn scan_file_v1(request: ScanFileRequestV1) -> Result<ScanResultV1, Ap
         if record.errors.iter().any(|error| error.contains("size")) {
             held.push(record.target_path.display.clone());
         }
+        let engine_id = record.engine_reports.first().map_or_else(
+            || "unknown".to_owned(),
+            |report| report.engine.engine_id.clone(),
+        );
+        engine_reports.extend(record.engine_reports.clone());
         for rule_match in record.rule_matches {
             findings.push(ScanFindingV1 {
                 path: record.target_path.display.clone(),
-                identity: serde_json::to_value(&record.file_identity).unwrap_or(Value::Null),
-                rule_id: Some(rule_match.identifier),
-                matched_evidence: Some(serde_json::json!({
-                    "condition": rule_match.matched_condition,
-                    "reference": rule_match.evidence_reference,
-                })),
+                identity: record.file_identity.clone(),
+                engine_id: engine_id.clone(),
+                rule_id: rule_match.identifier,
+                namespace: rule_match.namespace,
+                matched_condition: rule_match.matched_condition,
+                evidence_reference: rule_match.evidence_reference,
+                tags: rule_match.tags,
+                metadata: rule_match.metadata,
+                spans: rule_match.spans,
                 confidence: None,
                 severity: Some(format!("{:?}", rule_match.severity)),
             });
@@ -262,7 +307,7 @@ pub async fn scan_file_v1(request: ScanFileRequestV1) -> Result<ScanResultV1, Ap
             expected_bytes_sha256: actual_digest,
             source_path: request.rule_pack.source_path,
         },
-        yara: None,
+        engine_reports,
     })
 }
 
@@ -682,6 +727,36 @@ mod tests {
         assert_eq!(result.state, ScanStateV1::Completed);
         assert_eq!(result.processed_count, 1);
         assert_eq!(result.finding_count, 0);
+    }
+
+    #[tokio::test]
+    async fn yara_x_product_path_returns_typed_complete_coverage() {
+        let dir = tempdir().expect("tempdir");
+        let file = dir.path().join("fixture.txt");
+        fs::write(&file, b"HARMLESS_SENTINEL_YARA_X_MARKER").expect("fixture");
+        let rules = dir.path().join("rules.yar");
+        fs::write(&rules, r#"rule ProductMarker : synthetic { strings: $a = "HARMLESS_SENTINEL_YARA_X_MARKER" condition: $a }"#).expect("rules");
+        let result = scan_file_yara_x_v1(ScanFileRequestV1 {
+            request_id: Uuid::new_v4().to_string(),
+            target_path: file.to_string_lossy().into_owned(),
+            rule_pack: RulePackBindingV1 {
+                pack_id: "product-yara-x".to_owned(),
+                expected_bytes_sha256: hex::encode(Sha256::digest(
+                    fs::read(&rules).expect("rules read"),
+                )),
+                source_path: rules.to_string_lossy().into_owned(),
+            },
+        })
+        .await
+        .expect("YARA-X scan");
+        assert_eq!(result.state, ScanStateV1::Completed);
+        assert_eq!(result.finding_count, 1);
+        assert_eq!(result.findings[0].engine_id, "yara-x");
+        assert_eq!(result.findings[0].namespace, "product");
+        assert_eq!(
+            result.engine_reports[0].state,
+            sentinel_core::EngineCoverageStateV1::Complete
+        );
     }
 
     #[tokio::test]

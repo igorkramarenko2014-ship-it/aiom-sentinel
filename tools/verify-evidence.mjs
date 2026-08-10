@@ -14,7 +14,7 @@ const evidenceQualities = new Set(["AE0", "AE1", "AE2", "AE3"]);
 
 try {
   const evidence = JSON.parse(await readFile(file, "utf8"));
-  if (evidence.schema_version !== "1.1.0" || !Array.isArray(evidence.records) || !Array.isArray(evidence.traversal_errors)) throw new Error("invalid evidence envelope");
+  if (!(evidence.schema_version === "1.1.0" || evidence.schema_version === "1.2.0") || !Array.isArray(evidence.records) || !Array.isArray(evidence.traversal_errors)) throw new Error("invalid evidence envelope");
   for (const [index, record] of evidence.records.entries()) {
     for (const key of required) if (!(key in record)) throw new Error(`record ${index} missing ${key}`);
     if (!allowedVerdicts.has(record.verdict)) throw new Error(`record ${index} has invalid verdict`);

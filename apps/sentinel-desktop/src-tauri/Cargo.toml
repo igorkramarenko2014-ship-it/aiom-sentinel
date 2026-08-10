@@ -9,6 +9,7 @@ edition = "2021"
 rust-version = "1.77.2"
 
 [workspace]
+resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -23,6 +24,7 @@ tauri-build = { version = "2.6.3", features = [] }
 sentinel-core = { path = "../../../crates/sentinel-core" }
 sentinel-product-dto = { path = "../../../crates/sentinel-product-dto" }
 sentinel-product-service = { path = "../../../crates/sentinel-product-service" }
+sentinel-rules = { path = "../../../crates/sentinel-rules" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
@@ -31,3 +33,6 @@ uuid = { version = "1", features = ["v4"] }
 tokio = { version = "1", features = ["sync", "rt", "rt-multi-thread"] }
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-dialog = "2"
+
+[dev-dependencies]
+tempfile = "3"
