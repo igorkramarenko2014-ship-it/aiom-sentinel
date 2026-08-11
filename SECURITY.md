@@ -1,11 +1,15 @@
 # Security policy
 
-AIOM Sentinel is a defensive prototype. Please report vulnerabilities privately through the
-repository host's private reporting mechanism or the maintainers' private channel; do not open a
-public issue for a suspected vulnerability or attach malware samples. Include the affected commit,
-a harmless reproduction, expected impact, and whether the report contains sensitive data.
+AIOM Sentinel is a defensive prototype. Security reports should be submitted through GitHub Private
+Vulnerability Reporting for this repository. Do not open a public issue for a suspected
+vulnerability or attach live malware or unrelated user data. Use harmless reproduction material
+when possible. Include the affected commit, expected impact, and whether the report contains
+sensitive data.
 
 Security fixes must preserve bounded resource use, explicit failure reporting, identity
-revalidation, and the documented production-response boundary. The local transactional demo uses a
-test-only key and is not production remediation authority. Every Sentinel workspace crate forbids
-unsafe Rust, although dependencies may contain internally reviewed `unsafe` code.
+revalidation, and the documented production-response boundary. The scanner performs defensive,
+read-only analysis. The service-level portfolio pipeline can exercise transactional quarantine with
+harmless fixtures and test-only key authority; production automatic remediation is disabled,
+production key authority is not implemented, and Tauri is not wired to the transactional V2 response
+path. Every Sentinel workspace crate forbids unsafe Rust, although dependencies may contain
+internally reviewed `unsafe` code.
