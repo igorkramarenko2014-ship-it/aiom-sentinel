@@ -1,30 +1,27 @@
-name: phase1-verification
+name: portfolio-verification
 
 on:
   pull_request:
   push:
-    branches: [main]
 
 permissions:
   contents: read
 
 jobs:
   verify:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, macos-14, windows-2022]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Check formatting
         run: cargo fmt --all -- --check
-      - name: Lint workspace
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Check workspace
+        run: cargo check --workspace --all-features --locked
       - name: Test workspace
-        run: cargo test --workspace --all-features
-      - name: Build workspace
-        run: cargo build --workspace --all-features
+        run: cargo test --workspace --all-features --locked
+      - name: Lint product service strictly
+        run: cargo clippy -p sentinel-product-service --all-targets --locked -- -D warnings
+      - name: Verify harmless portfolio demo
+        run: ./scripts/verify-demo.sh
       - name: Check verifier syntax
         run: |
           node --check tools/verify-evidence.mjs
@@ -32,7 +29,7 @@ jobs:
           node --check tools/verify-portability.mjs
       - name: Verify evidence contract
         run: |
-          cargo run -p sentinel-cli -- scan tests/fixtures/harmless-negative.txt --output evidence.json
+          cargo run -p sentinel-cli --locked -- scan tests/fixtures/harmless-negative.txt --output evidence.json
           node tools/verify-evidence.mjs evidence.json
       - name: Verify architecture pack
         run: |

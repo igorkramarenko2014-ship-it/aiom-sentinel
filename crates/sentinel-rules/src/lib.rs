@@ -40,6 +40,8 @@ pub enum RuleError {
     YaraCompile(String),
     #[error("ruleset must contain at least one source")]
     EmptyRuleSet,
+    #[error("YARA pattern is too weak: {0}")]
+    WeakYaraPattern(String),
 }
 
 pub trait RuleEngine: Send + Sync {
@@ -203,6 +205,7 @@ impl YaraXEngine {
         let mut compiler = yara_x::Compiler::new();
         let mut digest = Sha256::new();
         for source in sources {
+            validate_yara_source_quality(source.source)?;
             digest.update((source.namespace.len() as u64).to_le_bytes());
             digest.update(source.namespace.as_bytes());
             digest.update((source.source.len() as u64).to_le_bytes());
@@ -224,6 +227,45 @@ impl YaraXEngine {
             },
         })
     }
+}
+
+fn validate_yara_source_quality(source: &str) -> Result<(), RuleError> {
+    let Some((_, after_strings)) = source.split_once("strings:") else {
+        return Ok(());
+    };
+    let strings = after_strings
+        .split_once("condition:")
+        .map_or(after_strings, |(section, _)| section);
+    let mut remaining = strings;
+    while let Some((left, after_equals)) = remaining.split_once('=') {
+        let value = after_equals.trim_start();
+        if let Some(quoted) = value.strip_prefix('"') {
+            let mut escaped = false;
+            let mut units = 0usize;
+            let mut end = None;
+            for (index, character) in quoted.char_indices() {
+                if escaped {
+                    escaped = false;
+                    units += 1;
+                } else if character == '\\' {
+                    escaped = true;
+                } else if character == '"' {
+                    end = Some(index + character.len_utf8());
+                    break;
+                } else {
+                    units += 1;
+                }
+            }
+            if units <= 1 {
+                let identifier = left.split_whitespace().last().unwrap_or("unknown-pattern");
+                return Err(RuleError::WeakYaraPattern(identifier.to_owned()));
+            }
+            remaining = end.map_or("", |index| &quoted[index..]);
+        } else {
+            remaining = after_equals;
+        }
+    }
+    Ok(())
 }
 
 impl RuleEngine for YaraXEngine {
@@ -501,6 +543,27 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn yara_x_rejects_obvious_single_byte_literal_and_accepts_normal_literal() {
+        // Arrange
+        let weak = YaraXRuleSource {
+            namespace: "quality",
+            source: r#"rule weak { strings: $a = "x" condition: $a }"#,
+        };
+        let normal = YaraXRuleSource {
+            namespace: "quality",
+            source: r#"rule normal { strings: $a = "HARMLESS_MARKER" condition: $a }"#,
+        };
+
+        // Act
+        let weak_result = YaraXEngine::compile("weak", &[weak]);
+        let normal_result = YaraXEngine::compile("normal", &[normal]);
+
+        // Assert
+        assert!(matches!(weak_result, Err(RuleError::WeakYaraPattern(_))));
+        assert!(normal_result.is_ok());
     }
 
     #[test]

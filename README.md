@@ -1,108 +1,148 @@
 # AIOM Sentinel
 
-## Position
+> AI-native endpoint-security prototype for macOS, written in Rust.
 
-Not a production antivirus yet. A verified Rust scanning core, deterministic evidence contract,
-and governed path toward endpoint protection. Cross-platform by architecture; platform support is
-earned through verification.
+AIOM Sentinel is a Rust/Tauri defensive endpoint-security prototype combining YARA-X detection,
+typed policy decisions, encrypted transactional quarantine, crash-safe recovery, authorized
+restore, and adversarial filesystem verification. It is locally verified on macOS/Unix; it is not
+claimed as a production EPP or antivirus.
 
-## Phase 1 state
+## Portfolio Release Candidate
 
-Implemented capabilities are recursive opt-in filesystem scanning, SHA-256/SHA-1/MD5, entropy,
-bounded PE metadata, local literal-rule matching, a Rust-native YARA-X static engine path, JSON
-evidence, timeline records, and documented exit codes. YARA-X is a verified-local production
-candidate for bounded static scans; it is not real-time endpoint protection or efficacy evidence.
+| Measured local verification | Result |
+| --- | --- |
+| Rust service tests | 68/68 PASS |
+| Workspace tests | 132 PASS |
+| Strict `sentinel-product-service` Clippy (`-D warnings`) | PASS / 0 diagnostics |
+| Protected-object security matrix | 24/24 PASS |
+| Object-swap isolation | 4/4 PASS |
+| Live response demos | 9/9 PASS |
+| Quarantine failpoints | 10/10 PASS |
+| Restore failpoints | 3/3 PASS |
+| Slice 3C focused tests | 10/10 PASS |
+| Portfolio demo verifier | PASS |
 
-## Nonclaims
+## What Sentinel does
 
-Sentinel is not a complete antivirus or EDR. `CLEAN` only means that configured Phase 1 detectors
-did not match. It makes no safety guarantee and has no process monitoring, real-time collection,
-memory scanning, network interception, kernel components, persistence, telemetry, cloud service,
-automatic update, quarantine, deletion, or remediation.
+Sentinel scans selected artifacts with the Rust-native YARA-X engine and carries a positive
+detection through a bounded service-level response pipeline. The executable demo uses a harmless
+fixture and a test-only key to prove the control flow; it does not enable production response.
 
-## Quick start
+The current local corpus also covers exact IOC lifecycle matching, signing/notarization evidence,
+supply-chain primitives, and macOS behavior-correlation models. These are bounded static or
+synthetic models, not claims of live process, WebView, Xcode, or security-control telemetry.
 
-```bash
-cargo build --workspace --all-features
-cargo run -p sentinel-cli -- scan tests/fixtures/harmless-negative.txt --output evidence.json
-node tools/verify-evidence.mjs evidence.json
+## Architecture
+
+```mermaid
+flowchart TD
+    A["Filesystem / artifact"] --> B["Watcher / stable acquisition"]
+    B --> C["YARA-X detection"]
+    C --> D["Canonical ArtifactIdentityV1"]
+    D --> E["ResponsePlanV1 / policy"]
+    E --> F{"Explicit effect gate"}
+    F -->|"authorized quarantine"| G["ResponseTransactionV1"]
+    G --> H["Encrypted AISV2 quarantine"]
+    H --> I["Durable journal / recovery"]
+    I --> J["Authorized restore"]
+    H --> K["Evidence receipt"]
+    L["Tauri UI / production automatic response"] -. "NOT WIRED TO TRANSACTIONAL V2" .-> G
 ```
 
-## Example scan
+The transactional path is verified at service level. The desktop UI is intentionally not wired to
+that path, and automatic production effects remain disabled. More detail is in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-Directory traversal is explicit:
+## 60-second demo
+
+Prerequisites: Rust 1.93+ and Cargo. From the repository root:
 
 ```bash
-cargo run -p sentinel-cli -- scan tests/fixtures --recursive \
-  --rules tests/fixtures/harmless.rules --output evidence.json
+./scripts/verify-demo.sh
 ```
 
-Rust-native YARA-X scanning is explicit and does not invoke Python:
+It proves a harmless fixture moves through detection marker → canonical identity → audit/no-effect
+control → explicit quarantine policy → transaction → encrypted quarantine → receipt. Success ends
+with:
+
+```text
+AIOM_SENTINEL_SLICE_3C_DEMO: PASS
+```
+
+## Security invariants and adversarial testing
+
+- Identity is derived from artifact bytes actually read by the canonical adapter; stale detection
+  metadata is not authoritative.
+- Audit and disabled policy plans cannot create quarantine transactions.
+- Only an enabled, identity-bound `Quarantine` plan can create a transaction.
+- Artifact mutation between planning and effect is rejected fail-closed.
+- Quarantine and restore use encrypted AISV2 objects, durable state transitions, no-replace
+  publication, and explicit restore authority.
+- The service regression corpus covers 24 protected-object cases, four object-swap races, ten
+  quarantine failpoints, and three restore failpoints.
+
+## Verification
+
+```bash
+cargo fmt --all -- --check
+CARGO_NET_OFFLINE=true cargo check --workspace --all-features --locked
+CARGO_NET_OFFLINE=true cargo test --workspace --all-features --locked
+CARGO_NET_OFFLINE=true cargo clippy -p sentinel-product-service --all-targets --locked -- -D warnings
+./scripts/verify-demo.sh
+```
+
+The desktop frontend has its own locally available checks:
+
+```bash
+cd apps/sentinel-desktop
+pnpm typecheck
+pnpm build
+```
+
+## Repository structure
+
+- `crates/` — Rust domain, scanner, rule engine, product service, and CLI crates.
+- `apps/sentinel-desktop/` — Tauri desktop shell and TypeScript UI.
+- `scripts/verify-demo.sh` — deterministic harmless Slice 3C demo verifier.
+- `docs/` — architecture, release boundaries, research provenance, and portfolio material.
+- `tests/` — integration tests and harmless fixtures.
+
+## Build and run
+
+Build the Rust workspace:
+
+```bash
+cargo build --workspace --all-features --locked
+```
+
+Run a bounded YARA-X fixture scan:
 
 ```bash
 cargo run -p sentinel-cli -- scan tests/fixtures/harmless-yara-positive.txt \
   --yara-rules tests/fixtures/harmless.yar --yara-namespace fixture --json
 ```
 
-## Example output
+## Known limitations
 
-Each detection includes `timestamp`, `path`, `hashes`, `entropy`, `signature`, `confidence`,
-`scanner_version`, and `engine_version`. Schema 1.1.0 additionally records `risk_score`,
-`threat_confidence`, `benign_confidence`, and `evidence_quality`. The schema contract is
-`docs/EVIDENCE-CONTRACT.md`.
+Sentinel is a prototype. macOS/Unix local verification does not establish Windows response parity,
+production key authority, transactional Tauri response wiring, automatic production remediation,
+real-malware efficacy, installer/service readiness, or privileged-path validation. Read
+[docs/release/KNOWN_LIMITATIONS.md](docs/release/KNOWN_LIMITATIONS.md) before relying on a result.
 
-## Verification
+## AI-native engineering workflow
 
-```bash
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
-cargo build --workspace --all-features
-cargo bench --workspace --no-run
-node tools/verify-architecture.mjs
-```
-
-See `docs/VERIFICATION.md` and `docs/release/VERIFICATION_RECEIPT.md` for the executed release
-candidate gate and the unavailable optional tools.
-
-## Cross-platform architecture
-
-The shared domain uses neutral OS, capability, verification, file-format, and file-identity
-contracts. The Platform Support Matrix records only locally measured verification. Windows and Linux
-CI are configured but not executed; no runtime support is claimed from configuration alone.
-
-## Architecture overview
-
-The executable workspace separates core types, hashing, PE parsing, rule evaluation, evidence,
-scanner orchestration, and CLI presentation. `docs/ARCHITECTURE.md` describes the current runtime;
-the enterprise architecture pack is design-only and declares `implementation_authority: NONE`.
-
-## Repository map
-
-- `crates/` — Phase 1 Rust workspace crates.
-- `tests/` — integration tests and harmless fixtures.
-- `fuzz/` and `benches/` — fuzz targets and benchmarks.
-- `docs/` — implementation, threat-model, architecture, and release documents.
-- `tools/` — evidence and architecture verifiers.
-- `architecture-input/` — source-corpus receipt; the verbatim corpus is locally restricted.
-
-## Security boundary
-
-The scanner opens supplied targets for read-only analysis and writes only the explicitly requested
-evidence file. It has no remediation authority. Resource limits and failure behavior are defined
-in `docs/THREAT-MODEL.md` and `docs/ARCHITECTURE.md`.
+The project was developed with an AI-native multi-agent engineering workflow: bounded coding
+slices, separate review/adversarial passes, and executable acceptance gates before closure. Those
+passes exposed TOCTOU defects, resulting in same-handle protected-object consumption,
+restore-temp `(dev, ino)` identity enforcement, and replayable verifier/failpoint evidence. Human
+operators retained architecture, scope, and release authority.
 
 ## Roadmap
 
-`docs/ROADMAP.md` describes future work as non-authoritative design. Phase 2 is not implemented or
-approved by this release candidate.
+This portfolio candidate stops at verified local defensive pipeline behavior. Future work is
+documented rather than implied: production key lifecycle, Tauri transactional response wiring,
+live telemetry collectors, external corpus qualification, and platform-specific validation.
 
-## Limitations
+## License
 
-Read `docs/release/KNOWN_LIMITATIONS.md` before relying on a result for an operational decision.
-
-## Reviewer entry points
-
-Start with `docs/release/REVIEWER_GUIDE.md`, then run the commands in
-`docs/release/VERIFICATION_RECEIPT.md`. `docs/release/SOURCE_CORPUS_PUBLICATION_DECISION.md`
-explains why the verbatim research corpus is excluded from public release.
+[MIT](LICENSE)

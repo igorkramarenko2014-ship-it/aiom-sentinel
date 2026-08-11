@@ -2,6 +2,9 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 //! Bounded read-only file and directory scanning orchestration.
 
+pub mod macos_analysis;
+pub mod supply_chain_analysis;
+
 use arc_swap::ArcSwap;
 use sentinel_core::{
     CanonicalPathStatus, CapabilityState, ConfidenceLevel, EVIDENCE_SCHEMA_VERSION,
@@ -748,6 +751,42 @@ mod tests {
         }
     }
 
+    struct NonCompleteEngine {
+        state: EngineCoverageStateV1,
+        reason: &'static str,
+    }
+
+    impl RuleEngine for NonCompleteEngine {
+        fn evaluate(&self, _bytes: &[u8], _budget: &EngineScanBudgetV1) -> EngineScanResultV1 {
+            EngineScanResultV1 {
+                schema_version: "sentinel-engine-result/v1".to_owned(),
+                coverage: EngineCoverageV1 {
+                    engine: self.identity(),
+                    ruleset: self.ruleset_identity(),
+                    state: self.state,
+                    scanned_bytes: 0,
+                    match_count: 0,
+                    reason: Some(self.reason.to_owned()),
+                },
+                matches: Vec::new(),
+            }
+        }
+
+        fn identity(&self) -> DetectionEngineIdentityV1 {
+            DetectionEngineIdentityV1 {
+                engine_id: "non-complete-test-engine".to_owned(),
+                engine_version: "1".to_owned(),
+            }
+        }
+
+        fn ruleset_identity(&self) -> RuleSetIdentityV1 {
+            RuleSetIdentityV1 {
+                pack_id: "non-complete-test-pack".to_owned(),
+                content_sha256: "e".repeat(64),
+            }
+        }
+    }
+
     #[tokio::test]
     async fn engine_failure_cannot_become_clean() {
         let directory = tempfile::tempdir().unwrap();
@@ -766,6 +805,63 @@ mod tests {
             EngineCoverageStateV1::Failed
         );
         assert!(result.records[0].errors[0].contains("injected engine failure"));
+    }
+
+    #[tokio::test]
+    async fn timeout_and_unavailable_engine_cannot_become_clean() {
+        // Arrange
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("sample.txt");
+        std::fs::write(&path, b"benign bytes").unwrap();
+        let request = ScanRequest {
+            scan_id: Uuid::nil(),
+            target: ScanTarget(path),
+            recursive: false,
+            limits: ScanLimits::default(),
+        };
+
+        for (state, reason) in [
+            (EngineCoverageStateV1::Partial, "injected engine timeout"),
+            (
+                EngineCoverageStateV1::Unsupported,
+                "injected engine unavailable",
+            ),
+        ] {
+            // Act
+            let result = scan(
+                &request,
+                Some(Arc::new(NonCompleteEngine { state, reason })),
+            )
+            .await
+            .unwrap();
+
+            // Assert
+            assert_eq!(result.records[0].verdict, Verdict::ScanError);
+            assert_ne!(result.records[0].verdict, Verdict::Clean);
+            assert!(result.records[0].errors[0].contains(reason));
+        }
+    }
+
+    #[tokio::test]
+    async fn parser_failure_cannot_become_clean() {
+        // Arrange
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("malformed.exe");
+        std::fs::write(&path, b"MZ").unwrap();
+        let request = ScanRequest {
+            scan_id: Uuid::nil(),
+            target: ScanTarget(path),
+            recursive: false,
+            limits: ScanLimits::default(),
+        };
+
+        // Act
+        let result = scan(&request, None).await.unwrap();
+
+        // Assert
+        assert_eq!(result.records[0].verdict, Verdict::ScanError);
+        assert_ne!(result.records[0].verdict, Verdict::Clean);
+        assert!(result.records[0].errors[0].contains("PE parser"));
     }
 
     #[test]

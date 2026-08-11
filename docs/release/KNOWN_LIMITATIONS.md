@@ -1,18 +1,18 @@
-# Known Limitations
+# Known limitations
 
-implementation_authority: PHASE_1_ONLY
+AIOM Sentinel is a locally verified defensive endpoint-security prototype, not a production EPP.
 
-- A clean result is detector-relative, not a safety guarantee.
-- Static scanning alone does not provide modern endpoint protection; there is no behavioral or fileless detection.
-- Rust-native YARA-X is integrated for bounded local static scans. Detection efficacy, production
-  rule-feed quality, on-access enforcement and external corpus validation remain unverified.
-- PE metadata parsing is bounded and does not provide ELF or Mach-O runtime parsing.
-- Scanning is user-mode and on-demand; there is no process, registry, or real-time filesystem monitor.
-- The scanner does not inspect memory, intercept network traffic, load drivers, persist state, or escalate privileges.
-- Prototype quarantine code exists, but no production response capability is claimed; there is no
-  verified remediation, containment or alert transport.
-- There is no memory collection, firewall, certificate interception, or production performance evidence.
-- Windows and Linux runtime verification are pending; qualified platform claims require external validation.
-- Hash and metadata results can change if a target changes during analysis; evidence records the observed result.
-- Coverage is measured separately; this receipt does not claim an independently measured 80 percent threshold.
-- Optional `cargo-audit`, `cargo-deny`, `cargo-fuzz`, and `cargo-llvm-cov` were unavailable in the release-candidate environment.
+- Verification is macOS/Unix local only. Windows response behavior and parity are unverified.
+- A clean result is detector-relative, not a safety guarantee. Real-malware efficacy, external
+  corpus qualification, and complete threat coverage are not established.
+- YARA-X is integrated for bounded local static scanning; live process, memory, network, kernel,
+  persistence, and on-access enforcement are not provided.
+- Production key authority is not implemented. The verified Slice 3C demo uses `TestKeyProvider`
+  and harmless temporary fixtures only.
+- Tauri transactional V2 response wiring is not enabled. Automatic production effects are disabled.
+- No production installer, service, privileged path, deployment, monitoring, or alert transport has
+  been validated.
+- Frontend automated tests are absent. The existing frontend typecheck/build lanes provide static
+  and build validation only.
+- Optional security tooling such as `cargo-audit`, `cargo-deny`, fuzzing, and coverage tooling is
+  not part of the measured portfolio release gate.

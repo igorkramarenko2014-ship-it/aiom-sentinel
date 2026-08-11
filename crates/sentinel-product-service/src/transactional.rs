@@ -1,4 +1,4 @@
-use super::audit_policy::{ArtifactIdentityV1, ResponseActionV1};
+use super::audit_policy::{ArtifactIdentityV1, ResponseActionV1, ResponsePlanV1};
 use super::quarantine::QuarantineStoreV2;
 use aes_gcm::{
     Aes256Gcm, KeyInit,
@@ -958,7 +958,9 @@ pub fn restore_quarantine_v2_with_failpoint(
     })
 }
 
-pub fn plan_transaction(
+/// Test-only constructor retained for the pre-Slice-3C unit-test corpus.
+#[cfg(test)]
+fn plan_transaction(
     transaction_id: String,
     artifact: ArtifactIdentityV1,
     action: ResponseActionV1,
@@ -1049,6 +1051,30 @@ pub fn plan_transaction(
     */
 }
 
+/// Create a quarantine transaction only from an identity-bound, enabled policy plan.
+pub fn plan_transaction_from_plan(
+    artifact: ArtifactIdentityV1,
+    plan: &ResponsePlanV1,
+) -> Result<ResponseTransactionV1, String> {
+    if plan.artifact != artifact {
+        return Err("POLICY_ARTIFACT_IDENTITY_MISMATCH".into());
+    }
+    if !plan.effect_enabled {
+        return Err("POLICY_EFFECT_NOT_AUTHORIZED".into());
+    }
+    if plan.action != ResponseActionV1::Quarantine {
+        return Err("POLICY_ACTION_NOT_QUARANTINE".into());
+    }
+    Ok(ResponseTransactionV1 {
+        schema_version: "sentinel-response/v1".into(),
+        response_idempotency_key: plan.transaction_id.clone(),
+        transaction_id: plan.transaction_id.clone(),
+        artifact,
+        action: ResponseActionV1::Quarantine,
+        state: TransactionStateV1::Planned,
+    })
+}
+
 pub fn advance(tx: &mut ResponseTransactionV1, next: TransactionStateV1) -> Result<(), String> {
     let valid = matches!(
         (&tx.state, &next),
@@ -1103,6 +1129,196 @@ pub fn advance(tx: &mut ResponseTransactionV1, next: TransactionStateV1) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::audit_policy::{AuditEffectV1, AuditPolicyV1, plan_for_artifact};
+
+    fn slice3c_identity(path: &Path, bytes: &[u8]) -> ArtifactIdentityV1 {
+        ArtifactIdentityV1 {
+            normalized_path: path.canonicalize().unwrap().display().to_string(),
+            content_digest: hex::encode(Sha256::digest(bytes)),
+            size: bytes.len() as u64,
+            platform_file_id: None,
+            generation: 1,
+        }
+    }
+
+    fn slice3c_policy(enabled: bool, effect: AuditEffectV1) -> AuditPolicyV1 {
+        AuditPolicyV1 {
+            policy_id: "slice3c".into(),
+            policy_version: "v1".into(),
+            enabled,
+            effect,
+            allowed_root: "/tmp".into(),
+            engine_id: "yara-x".into(),
+            ruleset_id: "harmless-fixture".into(),
+        }
+    }
+
+    #[test]
+    fn s3c_t03_audit_only_plan_cannot_create_quarantine_transaction() {
+        // Arrange
+        let identity = ArtifactIdentityV1 {
+            normalized_path: "/tmp/audit-only".into(),
+            content_digest: "digest".into(),
+            size: 1,
+            platform_file_id: None,
+            generation: 1,
+        };
+        let plan =
+            plan_for_artifact(&identity, &slice3c_policy(true, AuditEffectV1::AuditOnly)).unwrap();
+
+        // Act
+        let result = plan_transaction_from_plan(identity, &plan);
+
+        // Assert — S3C-ID-02
+        assert_eq!(result.unwrap_err(), "POLICY_EFFECT_NOT_AUTHORIZED");
+    }
+
+    #[test]
+    fn s3c_t04_disabled_plan_cannot_create_quarantine_transaction() {
+        // Arrange
+        let identity = ArtifactIdentityV1 {
+            normalized_path: "/tmp/disabled".into(),
+            content_digest: "digest".into(),
+            size: 1,
+            platform_file_id: None,
+            generation: 1,
+        };
+        let plan = plan_for_artifact(&identity, &slice3c_policy(false, AuditEffectV1::Quarantine))
+            .unwrap();
+
+        // Act
+        let result = plan_transaction_from_plan(identity, &plan);
+
+        // Assert — S3C-ID-02
+        assert_eq!(result.unwrap_err(), "POLICY_EFFECT_NOT_AUTHORIZED");
+    }
+
+    #[test]
+    fn s3c_t05_explicit_enabled_quarantine_plan_creates_transaction() {
+        // Arrange
+        let identity = ArtifactIdentityV1 {
+            normalized_path: "/tmp/authorized".into(),
+            content_digest: "digest".into(),
+            size: 1,
+            platform_file_id: None,
+            generation: 1,
+        };
+        let plan =
+            plan_for_artifact(&identity, &slice3c_policy(true, AuditEffectV1::Quarantine)).unwrap();
+
+        // Act
+        let transaction = plan_transaction_from_plan(identity.clone(), &plan).unwrap();
+
+        // Assert — S3C-ID-03
+        assert_eq!(transaction.artifact, identity);
+        assert_eq!(transaction.action, ResponseActionV1::Quarantine);
+        assert_eq!(transaction.transaction_id, plan.transaction_id);
+    }
+
+    #[test]
+    fn s3c_t06_non_quarantine_action_cannot_become_quarantine_transaction() {
+        // Arrange
+        let identity = ArtifactIdentityV1 {
+            normalized_path: "/tmp/forged-action".into(),
+            content_digest: "digest".into(),
+            size: 1,
+            platform_file_id: None,
+            generation: 1,
+        };
+        let mut plan =
+            plan_for_artifact(&identity, &slice3c_policy(true, AuditEffectV1::Quarantine)).unwrap();
+        plan.action = ResponseActionV1::Audit;
+
+        // Act
+        let result = plan_transaction_from_plan(identity, &plan);
+
+        // Assert — S3C-ID-03
+        assert_eq!(result.unwrap_err(), "POLICY_ACTION_NOT_QUARANTINE");
+    }
+
+    #[test]
+    fn s3c_t07_mismatched_plan_identity_is_rejected() {
+        // Arrange
+        let identity = ArtifactIdentityV1 {
+            normalized_path: "/tmp/original".into(),
+            content_digest: "digest-a".into(),
+            size: 1,
+            platform_file_id: None,
+            generation: 1,
+        };
+        let plan =
+            plan_for_artifact(&identity, &slice3c_policy(true, AuditEffectV1::Quarantine)).unwrap();
+        let mut replacement = identity;
+        replacement.content_digest = "digest-b".into();
+
+        // Act
+        let result = plan_transaction_from_plan(replacement, &plan);
+
+        // Assert — S3C-ID-03
+        assert_eq!(result.unwrap_err(), "POLICY_ARTIFACT_IDENTITY_MISMATCH");
+    }
+
+    #[test]
+    fn s3c_t08_stale_artifact_after_planning_is_rejected_before_effect() {
+        // Arrange
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("harmless");
+        let original = b"harmless original";
+        let replacement = b"harmless replacement";
+        fs::write(&source, original).unwrap();
+        let identity = slice3c_identity(&source, original);
+        let plan =
+            plan_for_artifact(&identity, &slice3c_policy(true, AuditEffectV1::Quarantine)).unwrap();
+        let mut transaction = plan_transaction_from_plan(identity, &plan).unwrap();
+        let store = QuarantineStoreV2::open(directory.path().join("store")).unwrap();
+        fs::write(&source, replacement).unwrap();
+
+        // Act
+        let result = execute_quarantine_v2(&mut transaction, &store, &TestKeyProvider([3; 32]));
+
+        // Assert — S3C-ID-04
+        assert_eq!(result.unwrap_err(), "STALE_ARTIFACT");
+        assert_eq!(fs::read(&source).unwrap(), replacement);
+        assert!(!store.object_path(&plan.transaction_id).exists());
+        assert_ne!(transaction.state, TransactionStateV1::Committed);
+    }
+
+    #[test]
+    fn s3c_t09_authorized_harmless_fixture_reaches_quarantine_receipt() {
+        // Arrange
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("harmless");
+        let bytes = b"harmless authorized Slice 3C fixture";
+        fs::write(&source, bytes).unwrap();
+        let identity = slice3c_identity(&source, bytes);
+        let plan =
+            plan_for_artifact(&identity, &slice3c_policy(true, AuditEffectV1::Quarantine)).unwrap();
+        let mut transaction = plan_transaction_from_plan(identity, &plan).unwrap();
+        let store = QuarantineStoreV2::open(directory.path().join("store")).unwrap();
+        let key = TestKeyProvider([3; 32]);
+
+        // Act
+        let receipt = execute_quarantine_v2(&mut transaction, &store, &key).unwrap();
+
+        // Assert — S3C-ID-05
+        assert_eq!(receipt.state, TransactionStateV1::Committed);
+        assert_eq!(receipt.digest, hex::encode(Sha256::digest(bytes)));
+        assert!(!source.exists());
+        assert!(store.object_path(&receipt.transaction_id).exists());
+    }
+
+    #[test]
+    fn s3c_t10_key_authority_is_explicitly_test_only() {
+        // Arrange
+        let key = TestKeyProvider([3; 32]);
+
+        // Act
+        let authority_type = std::any::type_name_of_val(&key);
+
+        // Assert — S3C-ID-05 / S3C-ID-06
+        assert!(authority_type.ends_with("TestKeyProvider"));
+        assert_eq!(key.0, [3; 32]);
+    }
 
     fn canonical_quarantined(
         id: &str,

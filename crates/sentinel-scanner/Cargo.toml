@@ -11,6 +11,8 @@ sentinel-core = { path = "../sentinel-core" }
 sentinel-hash = { path = "../sentinel-hash" }
 sentinel-pe = { path = "../sentinel-pe" }
 sentinel-rules = { path = "../sentinel-rules" }
+serde.workspace = true
+serde_json.workspace = true
 hex.workspace = true
 sha2.workspace = true
 time.workspace = true

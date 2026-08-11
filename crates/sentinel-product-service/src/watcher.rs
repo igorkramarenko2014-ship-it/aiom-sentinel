@@ -116,22 +116,22 @@ impl BoundedIntake {
     }
     pub fn submit(&self, path: PathBuf, kind: EventKind, generation: u64) -> bool {
         if !self.root.as_os_str().is_empty() && !path.starts_with(&self.root) {
-            self.counters.lock().unwrap().rejected += 1;
+            lock_or_invariant_panic(&self.counters).rejected += 1;
             return false;
         }
         let now = Instant::now();
         {
-            let mut last = self.last.lock().unwrap();
+            let mut last = lock_or_invariant_panic(&self.last);
             last.retain(|_, t| now.duration_since(*t) < self.debounce);
             if last
                 .get(&path)
                 .is_some_and(|t| now.duration_since(*t) < self.debounce)
             {
-                self.counters.lock().unwrap().coalesced += 1;
+                lock_or_invariant_panic(&self.counters).coalesced += 1;
                 return false;
             }
         }
-        let mut id = self.next_id.lock().unwrap();
+        let mut id = lock_or_invariant_panic(&self.next_id);
         *id += 1;
         let event = IntakeEvent {
             id: *id,
@@ -142,19 +142,26 @@ impl BoundedIntake {
         let accepted_path = event.path.clone();
         match self.tx.try_send(event) {
             Ok(()) => {
-                self.last.lock().unwrap().insert(accepted_path, now);
-                self.counters.lock().unwrap().accepted += 1;
+                lock_or_invariant_panic(&self.last).insert(accepted_path, now);
+                lock_or_invariant_panic(&self.counters).accepted += 1;
                 true
             }
             Err(TrySendError::Full(_)) => {
-                self.counters.lock().unwrap().dropped += 1;
+                lock_or_invariant_panic(&self.counters).dropped += 1;
                 false
             }
             Err(TrySendError::Disconnected(_)) => {
-                self.counters.lock().unwrap().dropped += 1;
+                lock_or_invariant_panic(&self.counters).dropped += 1;
                 false
             }
         }
+    }
+}
+
+fn lock_or_invariant_panic<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    match mutex.lock() {
+        Ok(guard) => guard,
+        Err(_) => panic!("bounded watcher mutex poisoned by a panicking owner"),
     }
 }
 
@@ -172,10 +179,11 @@ pub fn stable_file(path: &Path, deadline: Instant) -> std::io::Result<std::fs::M
                 "candidate is not a regular non-symlink file",
             ));
         }
-        if let Some(old) = &previous {
-            if old.len() == metadata.len() && old.modified().ok() == metadata.modified().ok() {
-                return Ok(metadata);
-            }
+        if let Some(old) = &previous
+            && old.len() == metadata.len()
+            && old.modified().ok() == metadata.modified().ok()
+        {
+            return Ok(metadata);
         }
         if Instant::now() >= deadline {
             return Err(std::io::Error::new(
@@ -209,16 +217,14 @@ pub fn reconcile_root(
 ) -> Vec<PathBuf> {
     let mut discovered = Vec::new();
     let mut observed = HashMap::new();
-    let mut seen = 0usize;
     let Ok(entries) = std::fs::read_dir(root) else {
         return discovered;
     };
-    for item in entries.flatten() {
+    for (seen, item) in entries.flatten().enumerate() {
         if seen >= budget {
             break;
         }
         let path = item.path();
-        seen += 1;
         let Ok(meta) = std::fs::symlink_metadata(&path) else {
             continue;
         };

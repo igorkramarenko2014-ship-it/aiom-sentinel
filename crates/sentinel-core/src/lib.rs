@@ -2,6 +2,8 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 //! Stable domain contracts for Phase 1 static scanning.
 
+pub mod threat_coverage;
+
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde::{Deserialize, Serialize};
 use std::{ffi::OsStr, path::PathBuf};
@@ -322,6 +324,100 @@ pub struct EngineVersion {
     pub pe_parser: String,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum IocLifecycle {
+    Active,
+    Stale,
+    Withdrawn,
+    Disputed,
+    Superseded,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum IocType {
+    Sha256,
+    Domain,
+    Url,
+    Ip,
+    Certificate,
+    TeamId,
+    DeveloperId,
+    BundleId,
+    PackageName,
+    PackageVersion,
+    NpmNamespace,
+    FilePathPattern,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum IocDisposition {
+    ActiveAlert,
+    Review,
+    HistoricalOnly,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct IocSource {
+    pub source_id: String,
+    pub source_type: String,
+    pub confidence: u8,
+    pub last_updated: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct IocRecord {
+    pub ioc_id: String,
+    pub ioc_type: IocType,
+    pub value: String,
+    pub lifecycle: IocLifecycle,
+    pub sources: Vec<IocSource>,
+    pub superseded_by: Option<String>,
+}
+
+impl IocRecord {
+    #[must_use]
+    pub const fn disposition(&self) -> IocDisposition {
+        match self.lifecycle {
+            IocLifecycle::Active => IocDisposition::ActiveAlert,
+            IocLifecycle::Disputed => IocDisposition::Review,
+            IocLifecycle::Stale | IocLifecycle::Withdrawn | IocLifecycle::Superseded => {
+                IocDisposition::HistoricalOnly
+            }
+        }
+    }
+
+    #[must_use]
+    pub fn exact_match_disposition(
+        &self,
+        ioc_type: IocType,
+        observed_value: &str,
+    ) -> Option<IocDisposition> {
+        (self.ioc_type == ioc_type && self.value == observed_value).then(|| self.disposition())
+    }
+
+    pub fn transition_to(
+        &mut self,
+        lifecycle: IocLifecycle,
+        superseded_by: Option<String>,
+    ) -> Result<(), String> {
+        if lifecycle == IocLifecycle::Superseded {
+            let replacement = superseded_by
+                .as_deref()
+                .filter(|value| !value.is_empty() && *value != self.ioc_id)
+                .ok_or_else(|| "superseded IOC requires a distinct replacement id".to_owned())?;
+            self.superseded_by = Some(replacement.to_owned());
+        } else if superseded_by.is_some() {
+            return Err("superseded_by is only valid for SUPERSEDED lifecycle".to_owned());
+        } else {
+            self.superseded_by = None;
+        }
+        self.lifecycle = lifecycle;
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Verdict {
@@ -433,5 +529,105 @@ mod tests {
         assert_eq!(serde_json::to_value(FileFormat::Pe).unwrap(), "PE");
         assert_eq!(serde_json::to_value(FileFormat::Elf).unwrap(), "ELF");
         assert_eq!(serde_json::to_value(FileFormat::MachO).unwrap(), "MACH_O");
+    }
+
+    #[test]
+    fn ioc_lifecycle_serialization_is_explicit() {
+        // Arrange
+        let states = [
+            IocLifecycle::Active,
+            IocLifecycle::Stale,
+            IocLifecycle::Withdrawn,
+            IocLifecycle::Disputed,
+            IocLifecycle::Superseded,
+        ];
+
+        // Act
+        let encoded = serde_json::to_value(states).unwrap();
+        let decoded: Vec<IocLifecycle> = serde_json::from_value(encoded.clone()).unwrap();
+
+        // Assert
+        assert_eq!(
+            encoded,
+            serde_json::json!(["ACTIVE", "STALE", "WITHDRAWN", "DISPUTED", "SUPERSEDED"])
+        );
+        assert_eq!(decoded, states);
+    }
+
+    fn active_ioc() -> IocRecord {
+        IocRecord {
+            ioc_id: "sha256:fixture".to_owned(),
+            ioc_type: IocType::Sha256,
+            value: "00".repeat(32),
+            lifecycle: IocLifecycle::Active,
+            sources: vec![IocSource {
+                source_id: "fixture-source".to_owned(),
+                source_type: "UPSTREAM".to_owned(),
+                confidence: 80,
+                last_updated: "2026-08-10T00:00:00Z".to_owned(),
+            }],
+            superseded_by: None,
+        }
+    }
+
+    #[test]
+    fn ioc_lifecycle_controls_current_disposition() {
+        // Arrange
+        let mut record = active_ioc();
+
+        // Act / Assert
+        assert_eq!(record.disposition(), IocDisposition::ActiveAlert);
+        record.transition_to(IocLifecycle::Disputed, None).unwrap();
+        assert_eq!(record.disposition(), IocDisposition::Review);
+        record.transition_to(IocLifecycle::Withdrawn, None).unwrap();
+        assert_eq!(record.disposition(), IocDisposition::HistoricalOnly);
+    }
+
+    #[test]
+    fn supersession_requires_a_distinct_replacement() {
+        // Arrange
+        let mut record = active_ioc();
+
+        // Act
+        let missing = record.transition_to(IocLifecycle::Superseded, None);
+        let same =
+            record.transition_to(IocLifecycle::Superseded, Some("sha256:fixture".to_owned()));
+        let valid = record.transition_to(
+            IocLifecycle::Superseded,
+            Some("sha256:replacement".to_owned()),
+        );
+
+        // Assert
+        assert!(missing.is_err());
+        assert!(same.is_err());
+        assert!(valid.is_ok());
+        assert_eq!(record.disposition(), IocDisposition::HistoricalOnly);
+    }
+
+    #[test]
+    fn ioc_matching_is_exact_and_lifecycle_aware() {
+        // Arrange
+        let mut record = active_ioc();
+        let exact_value = record.value.clone();
+
+        // Act / Assert
+        assert_eq!(
+            record.exact_match_disposition(IocType::Sha256, &exact_value),
+            Some(IocDisposition::ActiveAlert)
+        );
+        assert_eq!(
+            record.exact_match_disposition(IocType::Sha256, &format!("{exact_value}0")),
+            None
+        );
+        assert_eq!(
+            record.exact_match_disposition(IocType::Domain, &exact_value),
+            None
+        );
+
+        record.transition_to(IocLifecycle::Stale, None).unwrap();
+        assert_eq!(
+            record.exact_match_disposition(IocType::Sha256, &exact_value),
+            Some(IocDisposition::HistoricalOnly)
+        );
     }
 }

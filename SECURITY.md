@@ -1,13 +1,11 @@
 # Security policy
 
-Before a public contact is configured, use the repository host's private reporting mechanism or
-contact the maintainers through the repository's private channel. Do not disclose vulnerabilities
-in public issues. Include the affected version, harmless reproducible input, expected impact, and
-whether the report contains sensitive data. Do not attach malware samples.
+AIOM Sentinel is a defensive prototype. Please report vulnerabilities privately through the
+repository host's private reporting mechanism or the maintainers' private channel; do not open a
+public issue for a suspected vulnerability or attach malware samples. Include the affected commit,
+a harmless reproduction, expected impact, and whether the report contains sensitive data.
 
-Publication gate: replace this placeholder with a maintained private disclosure address before any
-public release.
-
-Phase 1 never remediates targets. Security fixes must preserve read-only scanning, bounded resource
-use, explicit errors, and evidence compatibility. Dependencies may contain internally reviewed
-`unsafe` Rust even though every Sentinel workspace crate uses `#![forbid(unsafe_code)]`.
+Security fixes must preserve bounded resource use, explicit failure reporting, identity
+revalidation, and the documented production-response boundary. The local transactional demo uses a
+test-only key and is not production remediation authority. Every Sentinel workspace crate forbids
+unsafe Rust, although dependencies may contain internally reviewed `unsafe` code.
