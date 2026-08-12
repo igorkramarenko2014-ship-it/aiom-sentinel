@@ -2,7 +2,8 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-target_dir="${CARGO_TARGET_DIR:-/private/tmp/aiom-sentinel-slice3c-target}"
+temp_root="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+target_dir="${CARGO_TARGET_DIR:-$temp_root/aiom-sentinel-slice3c-target}"
 demo_output="$(mktemp "${TMPDIR:-/tmp}/aiom-sentinel-slice3c.XXXXXX")"
 trap 'rm -f "$demo_output"' EXIT
 
