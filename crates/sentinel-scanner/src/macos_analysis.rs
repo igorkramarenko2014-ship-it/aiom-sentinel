@@ -75,6 +75,56 @@ pub struct XcodeBuildEvidence {
     pub persistence_change: bool,
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct LaunchAgentEvidence {
+    pub temporary_execution: bool,
+    pub stable_copy_present: bool,
+    pub launchagent_registration: bool,
+    pub run_at_load: bool,
+    pub keep_alive: bool,
+    pub legitimate_install_context: bool,
+}
+
+/// Static/synthetic only: no LaunchAgent is created or queried by this model.
+#[must_use]
+pub fn assess_launchagent_persistence(evidence: &LaunchAgentEvidence) -> BehavioralAssessment {
+    let correlated = evidence.temporary_execution
+        && evidence.stable_copy_present
+        && evidence.launchagent_registration
+        && (evidence.run_at_load || evidence.keep_alive)
+        && !evidence.legitimate_install_context;
+    assessment(
+        correlated,
+        "TEMP_EXECUTION_STABLE_COPY_LAUNCHAGENT",
+        AnalysisAvailability::Experimental,
+    )
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum CapabilityEvidenceLevel {
+    StaticCapabilityHint,
+    ImplementedCapabilityEvidence,
+    ObservedRuntimeBehavior,
+}
+
+#[must_use]
+pub fn capability_evidence_level(
+    symbol_present: bool,
+    implementation_reachable: bool,
+    runtime_observed: bool,
+) -> Option<CapabilityEvidenceLevel> {
+    if runtime_observed {
+        Some(CapabilityEvidenceLevel::ObservedRuntimeBehavior)
+    } else if implementation_reachable {
+        Some(CapabilityEvidenceLevel::ImplementedCapabilityEvidence)
+    } else if symbol_present {
+        Some(CapabilityEvidenceLevel::StaticCapabilityHint)
+    } else {
+        None
+    }
+}
+
 #[must_use]
 pub fn assess_xcode_build(evidence: &XcodeBuildEvidence) -> BehavioralAssessment {
     let unexpected = evidence
@@ -454,5 +504,40 @@ mod tests {
         let result = assess_remote_bridge(&bridge);
         assert_eq!(result.verdict, Verdict::Suspicious);
         assert_eq!(result.availability, AnalysisAvailability::Experimental);
+    }
+
+    #[test]
+    fn launchagent_alone_is_clean_but_correlated_temp_chain_is_suspicious() {
+        let benign = assess_launchagent_persistence(&LaunchAgentEvidence {
+            launchagent_registration: true,
+            run_at_load: true,
+            ..LaunchAgentEvidence::default()
+        });
+        let suspicious = assess_launchagent_persistence(&LaunchAgentEvidence {
+            temporary_execution: true,
+            stable_copy_present: true,
+            launchagent_registration: true,
+            run_at_load: true,
+            ..LaunchAgentEvidence::default()
+        });
+        assert_eq!(benign.verdict, Verdict::Clean);
+        assert_eq!(suspicious.verdict, Verdict::Suspicious);
+    }
+
+    #[test]
+    fn capability_levels_never_promote_symbols_to_runtime_observation() {
+        assert_eq!(
+            capability_evidence_level(true, false, false),
+            Some(CapabilityEvidenceLevel::StaticCapabilityHint)
+        );
+        assert_eq!(
+            capability_evidence_level(true, true, false),
+            Some(CapabilityEvidenceLevel::ImplementedCapabilityEvidence)
+        );
+        assert_eq!(
+            capability_evidence_level(true, true, true),
+            Some(CapabilityEvidenceLevel::ObservedRuntimeBehavior)
+        );
+        assert_eq!(capability_evidence_level(false, false, false), None);
     }
 }

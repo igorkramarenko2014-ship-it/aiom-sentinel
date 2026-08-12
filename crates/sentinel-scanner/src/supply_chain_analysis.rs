@@ -1,3 +1,4 @@
+use sentinel_core::threat_coverage::CapabilityId;
 use sentinel_core::{ConfidenceLevel, Verdict};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -12,6 +13,153 @@ pub enum NpmPrimitive {
     ProvenanceDrift,
     CredentialAccess,
     LocalArtifactAfterUpstreamFix,
+    BuildTimeDependencyExecution,
+    ArchitectureSpecificArtifactSelection,
+    PlatformSpecificNativeFetch,
+}
+
+impl NpmPrimitive {
+    #[must_use]
+    pub const fn capability_id(self) -> CapabilityId {
+        match self {
+            Self::LifecycleExecution | Self::ImportTimeExecution => {
+                CapabilityId::NpmSupplyChainModel
+            }
+            Self::RuntimeBinaryDownload | Self::NewChildProcess => {
+                CapabilityId::BuildTimeDependencyExecution
+            }
+            Self::ProvenanceDrift
+            | Self::CredentialAccess
+            | Self::LocalArtifactAfterUpstreamFix => {
+                CapabilityId::PersistentEffectAfterInitialRemoval
+            }
+            Self::BuildTimeDependencyExecution => CapabilityId::BuildTimeDependencyExecution,
+            Self::ArchitectureSpecificArtifactSelection => {
+                CapabilityId::ArchitectureSpecificArtifactSelection
+            }
+            Self::PlatformSpecificNativeFetch => CapabilityId::PlatformSpecificNativeFetch,
+        }
+    }
+}
+
+#[cfg(test)]
+fn primitive_is_catalogued(primitive: NpmPrimitive) -> bool {
+    sentinel_core::threat_coverage::capability_coverage()
+        .iter()
+        .any(|row| row.capability == primitive.capability_id())
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct BuildDependencyEvidence {
+    pub source_repository_clean: bool,
+    pub dependency_graph_suspicious: bool,
+    pub resolved_package_suspicious: bool,
+    pub build_time_execution: bool,
+    pub install_hooks_disabled: bool,
+    pub architecture_selected: bool,
+    pub native_artifact_fetched: bool,
+    pub ordinary_installer_context: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BuildDependencyAnalysis {
+    pub primitives: Vec<NpmPrimitive>,
+    pub verdict: Verdict,
+    pub confidence: ConfidenceLevel,
+}
+
+/// Analyze a dependency/build chain without treating a clean source checkout or
+/// disabled install hooks as proof that imported build-time code is safe.
+#[must_use]
+pub fn analyze_build_dependency(evidence: &BuildDependencyEvidence) -> BuildDependencyAnalysis {
+    let mut primitives = Vec::new();
+    if evidence.build_time_execution {
+        primitives.push(NpmPrimitive::BuildTimeDependencyExecution);
+    }
+    if evidence.architecture_selected {
+        primitives.push(NpmPrimitive::ArchitectureSpecificArtifactSelection);
+    }
+    if evidence.native_artifact_fetched {
+        primitives.push(NpmPrimitive::PlatformSpecificNativeFetch);
+    }
+    let correlated = evidence.dependency_graph_suspicious
+        && (evidence.build_time_execution
+            || evidence.native_artifact_fetched
+            || evidence.resolved_package_suspicious)
+        && !evidence.ordinary_installer_context;
+    BuildDependencyAnalysis {
+        primitives,
+        verdict: if correlated {
+            Verdict::Suspicious
+        } else {
+            Verdict::Clean
+        },
+        confidence: if correlated {
+            ConfidenceLevel::Medium
+        } else {
+            ConfidenceLevel::Low
+        },
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PersistenceState {
+    InitialArtifactPresent,
+    InitialArtifactRemoved,
+    PersistentCopyPresent,
+    PersistenceMechanismPresent,
+    PersistentExecutionObserved,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct PersistenceEvidence {
+    pub initial_artifact_present: bool,
+    pub initial_artifact_removed: bool,
+    pub persistent_copy_present: bool,
+    pub persistence_mechanism_present: bool,
+    pub persistent_execution_observed: bool,
+    pub legitimate_install_context: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PersistenceAnalysis {
+    pub states: Vec<PersistenceState>,
+    pub remediation_resolved: bool,
+    pub verdict: Verdict,
+}
+
+#[must_use]
+pub fn analyze_persistence(evidence: &PersistenceEvidence) -> PersistenceAnalysis {
+    let mut states = Vec::new();
+    if evidence.initial_artifact_present {
+        states.push(PersistenceState::InitialArtifactPresent);
+    }
+    if evidence.initial_artifact_removed {
+        states.push(PersistenceState::InitialArtifactRemoved);
+    }
+    if evidence.persistent_copy_present {
+        states.push(PersistenceState::PersistentCopyPresent);
+    }
+    if evidence.persistence_mechanism_present {
+        states.push(PersistenceState::PersistenceMechanismPresent);
+    }
+    if evidence.persistent_execution_observed {
+        states.push(PersistenceState::PersistentExecutionObserved);
+    }
+    let persistent = evidence.persistent_copy_present
+        || evidence.persistence_mechanism_present
+        || evidence.persistent_execution_observed;
+    let suspicious = persistent && !evidence.legitimate_install_context;
+    PersistenceAnalysis {
+        states,
+        remediation_resolved: !persistent,
+        verdict: if suspicious {
+            Verdict::Suspicious
+        } else {
+            Verdict::Clean
+        },
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -353,6 +501,23 @@ mod tests {
     }
 
     #[test]
+    fn every_npm_primitive_has_a_registered_typed_capability() {
+        let primitives = [
+            NpmPrimitive::LifecycleExecution,
+            NpmPrimitive::ImportTimeExecution,
+            NpmPrimitive::RuntimeBinaryDownload,
+            NpmPrimitive::NewChildProcess,
+            NpmPrimitive::ProvenanceDrift,
+            NpmPrimitive::CredentialAccess,
+            NpmPrimitive::LocalArtifactAfterUpstreamFix,
+            NpmPrimitive::BuildTimeDependencyExecution,
+            NpmPrimitive::ArchitectureSpecificArtifactSelection,
+            NpmPrimitive::PlatformSpecificNativeFetch,
+        ];
+        assert!(primitives.iter().copied().all(primitive_is_catalogued));
+    }
+
+    #[test]
     fn correlated_remote_instruction_and_config_persistence_is_suspicious() {
         // Arrange
         let evidence = AgentSkillEvidence {
@@ -403,5 +568,88 @@ mod tests {
         assert_eq!(exfiltration_result.verdict, Verdict::Suspicious);
         assert_eq!(repository_result.verdict, Verdict::Suspicious);
         assert!(repository_result.observed_execution);
+    }
+
+    #[test]
+    fn dependency_graph_and_build_execution_remain_actionable_when_source_is_clean() {
+        let result = analyze_build_dependency(&BuildDependencyEvidence {
+            source_repository_clean: true,
+            dependency_graph_suspicious: true,
+            build_time_execution: true,
+            install_hooks_disabled: true,
+            ..BuildDependencyEvidence::default()
+        });
+        assert_eq!(result.verdict, Verdict::Suspicious);
+        assert!(
+            result
+                .primitives
+                .contains(&NpmPrimitive::BuildTimeDependencyExecution)
+        );
+    }
+
+    #[test]
+    fn ordinary_architecture_aware_installer_is_benign_compatible() {
+        let result = analyze_build_dependency(&BuildDependencyEvidence {
+            architecture_selected: true,
+            native_artifact_fetched: true,
+            ordinary_installer_context: true,
+            ..BuildDependencyEvidence::default()
+        });
+        assert_eq!(result.verdict, Verdict::Clean);
+    }
+
+    #[test]
+    fn build_execution_and_native_fetch_correlate_but_architecture_alone_does_not() {
+        let benign = analyze_build_dependency(&BuildDependencyEvidence {
+            architecture_selected: true,
+            ..BuildDependencyEvidence::default()
+        });
+        let suspicious = analyze_build_dependency(&BuildDependencyEvidence {
+            dependency_graph_suspicious: true,
+            build_time_execution: true,
+            architecture_selected: true,
+            native_artifact_fetched: true,
+            ..BuildDependencyEvidence::default()
+        });
+        assert_eq!(benign.verdict, Verdict::Clean);
+        assert_eq!(suspicious.verdict, Verdict::Suspicious);
+        assert!(
+            suspicious
+                .primitives
+                .contains(&NpmPrimitive::PlatformSpecificNativeFetch)
+        );
+    }
+
+    #[test]
+    fn removed_first_stage_does_not_hide_persistent_effect() {
+        let result = analyze_persistence(&PersistenceEvidence {
+            initial_artifact_removed: true,
+            persistent_copy_present: true,
+            persistence_mechanism_present: true,
+            ..PersistenceEvidence::default()
+        });
+        assert_eq!(result.verdict, Verdict::Suspicious);
+        assert!(!result.remediation_resolved);
+    }
+
+    #[test]
+    fn no_persistent_effect_allows_remediation_to_resolve() {
+        let result = analyze_persistence(&PersistenceEvidence {
+            initial_artifact_removed: true,
+            ..PersistenceEvidence::default()
+        });
+        assert_eq!(result.verdict, Verdict::Clean);
+        assert!(result.remediation_resolved);
+    }
+
+    #[test]
+    fn legitimate_install_persistence_is_benign_compatible() {
+        let result = analyze_persistence(&PersistenceEvidence {
+            persistent_copy_present: true,
+            persistence_mechanism_present: true,
+            legitimate_install_context: true,
+            ..PersistenceEvidence::default()
+        });
+        assert_eq!(result.verdict, Verdict::Clean);
     }
 }

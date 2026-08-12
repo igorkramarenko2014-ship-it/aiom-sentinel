@@ -19,9 +19,57 @@ pub enum RuntimeAvailability {
     Unavailable,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum CapabilityId {
+    IocLifecycle,
+    TransactionalQuarantineCore,
+    ProductQuarantineWiring,
+    ScannerFailureNeverClean,
+    MacosSigningEvidence,
+    ClickfixTerminalChain,
+    NpmSupplyChainModel,
+    AgentSkillModel,
+    XcodeBuildTriggeredExecution,
+    PreferencesEncodedPersistence,
+    MacosSecurityControlImpairment,
+    RemoteLogicNativeBridge,
+    YaraXHygiene,
+    BuildTimeDependencyExecution,
+    ArchitectureSpecificArtifactSelection,
+    PlatformSpecificNativeFetch,
+    PersistentEffectAfterInitialRemoval,
+    StaticCapabilityHints,
+    SourceClaimGovernance,
+}
+
+impl CapabilityId {
+    pub const ALL: [Self; 19] = [
+        Self::IocLifecycle,
+        Self::TransactionalQuarantineCore,
+        Self::ProductQuarantineWiring,
+        Self::ScannerFailureNeverClean,
+        Self::MacosSigningEvidence,
+        Self::ClickfixTerminalChain,
+        Self::NpmSupplyChainModel,
+        Self::AgentSkillModel,
+        Self::XcodeBuildTriggeredExecution,
+        Self::PreferencesEncodedPersistence,
+        Self::MacosSecurityControlImpairment,
+        Self::RemoteLogicNativeBridge,
+        Self::YaraXHygiene,
+        Self::BuildTimeDependencyExecution,
+        Self::ArchitectureSpecificArtifactSelection,
+        Self::PlatformSpecificNativeFetch,
+        Self::PersistentEffectAfterInitialRemoval,
+        Self::StaticCapabilityHints,
+        Self::SourceClaimGovernance,
+    ];
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CapabilityCoverage {
-    pub capability: String,
+    pub capability: CapabilityId,
     pub status: CoverageStatus,
     pub runtime_observation: RuntimeAvailability,
     pub limitation: Option<String>,
@@ -47,86 +95,187 @@ pub enum SourceProvenanceClass {
     SourceUnverified,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ClaimVerificationState {
+    Verified,
+    Unverified,
+    Disputed,
+    UnsupportedByPrimary,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SourceClaim {
+    pub source_id: String,
+    pub source_type: SourceProvenanceClass,
+    pub claim: String,
+    pub impact: String,
+    pub verification: ClaimVerificationState,
+    pub published_at: Option<String>,
+    pub feed_ingested_at: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct CanonicalImpact {
+    pub impact: String,
+    pub verification: ClaimVerificationState,
+    pub source_ids: Vec<String>,
+}
+
+/// Preserve every source claim while refusing to promote a stronger secondary
+/// headline over a primary claim without corroboration.
+#[must_use]
+pub fn resolve_canonical_impact(claims: &[SourceClaim]) -> Option<CanonicalImpact> {
+    let primary = claims.iter().find(|claim| {
+        matches!(
+            claim.source_type,
+            SourceProvenanceClass::PrimaryResearch | SourceProvenanceClass::Upstream
+        )
+    })?;
+    let corroborated = claims.iter().any(|claim| {
+        claim.impact == primary.impact
+            && matches!(claim.verification, ClaimVerificationState::Verified)
+    });
+    let supporting = claims
+        .iter()
+        .filter(|claim| claim.impact == primary.impact)
+        .map(|claim| claim.source_id.clone())
+        .collect();
+    Some(CanonicalImpact {
+        impact: primary.impact.clone(),
+        verification: if corroborated {
+            ClaimVerificationState::Verified
+        } else {
+            ClaimVerificationState::Unverified
+        },
+        source_ids: supporting,
+    })
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FeedRecency {
+    pub first_seen: Option<String>,
+    pub published_at: Option<String>,
+    pub feed_ingested_at: Option<String>,
+    pub observed_at: Option<String>,
+}
+
 #[must_use]
 pub fn capability_coverage() -> Vec<CapabilityCoverage> {
     vec![
         capability(
-            "IOC_LIFECYCLE",
+            CapabilityId::IocLifecycle,
             CoverageStatus::ImplementedTested,
             RuntimeAvailability::Available,
             None,
         ),
         capability(
-            "TRANSACTIONAL_QUARANTINE_CORE",
+            CapabilityId::TransactionalQuarantineCore,
             CoverageStatus::ImplementedTested,
             RuntimeAvailability::Available,
             Some("MACOS_UNIX_VERIFIED_LOCAL"),
         ),
         capability(
-            "PRODUCT_QUARANTINE_WIRING",
+            CapabilityId::ProductQuarantineWiring,
             CoverageStatus::Unavailable,
             RuntimeAvailability::Unavailable,
             Some("production key authority is not implemented"),
         ),
         capability(
-            "SCANNER_FAILURE_NEVER_CLEAN",
+            CapabilityId::ScannerFailureNeverClean,
             CoverageStatus::ImplementedTested,
             RuntimeAvailability::Available,
             None,
         ),
         capability(
-            "MACOS_SIGNING_EVIDENCE",
+            CapabilityId::MacosSigningEvidence,
             CoverageStatus::Partial,
             RuntimeAvailability::HostDependent,
             Some("bounded parser/correlation; no canonical live command adapter"),
         ),
         capability(
-            "CLICKFIX_TERMINAL_CHAIN",
+            CapabilityId::ClickfixTerminalChain,
             CoverageStatus::BlockedByTelemetry,
             RuntimeAvailability::Unavailable,
             Some("synthetic correlation only; no process telemetry"),
         ),
         capability(
-            "NPM_SUPPLY_CHAIN_MODEL",
+            CapabilityId::NpmSupplyChainModel,
             CoverageStatus::Partial,
             RuntimeAvailability::Unavailable,
             Some("bounded manifest/supplied-observation analysis; no endpoint observer"),
         ),
         capability(
-            "AGENT_SKILL_MODEL",
+            CapabilityId::AgentSkillModel,
             CoverageStatus::Partial,
             RuntimeAvailability::Unavailable,
             Some("static/synthetic analysis only"),
         ),
         capability(
-            "XCODE_BUILD_TRIGGERED_EXECUTION",
+            CapabilityId::XcodeBuildTriggeredExecution,
             CoverageStatus::BlockedByTelemetry,
             RuntimeAvailability::Unavailable,
             Some("bounded baseline/diff representation only"),
         ),
         capability(
-            "PREFERENCES_ENCODED_PERSISTENCE",
+            CapabilityId::PreferencesEncodedPersistence,
             CoverageStatus::BlockedByTelemetry,
             RuntimeAvailability::Unavailable,
             Some("bounded correlation representation only"),
         ),
         capability(
-            "MACOS_SECURITY_CONTROL_IMPAIRMENT",
+            CapabilityId::MacosSecurityControlImpairment,
             CoverageStatus::BlockedByTelemetry,
             RuntimeAvailability::Unavailable,
             Some("no TCC/XProtect observation surface"),
         ),
         capability(
-            "REMOTE_LOGIC_NATIVE_BRIDGE",
+            CapabilityId::RemoteLogicNativeBridge,
             CoverageStatus::Experimental,
             RuntimeAvailability::Unavailable,
             Some("no WebView runtime observer"),
         ),
         capability(
-            "YARA_X_HYGIENE",
+            CapabilityId::YaraXHygiene,
             CoverageStatus::ImplementedTested,
             RuntimeAvailability::Available,
             Some("compile hygiene is not detection efficacy"),
+        ),
+        capability(
+            CapabilityId::BuildTimeDependencyExecution,
+            CoverageStatus::ImplementedTested,
+            RuntimeAvailability::Unavailable,
+            Some("static/synthetic dependency-chain model; no build-process observer"),
+        ),
+        capability(
+            CapabilityId::ArchitectureSpecificArtifactSelection,
+            CoverageStatus::ImplementedTested,
+            RuntimeAvailability::Unavailable,
+            Some("architecture-aware selection model; no live artifact observer"),
+        ),
+        capability(
+            CapabilityId::PlatformSpecificNativeFetch,
+            CoverageStatus::ImplementedTested,
+            RuntimeAvailability::Unavailable,
+            Some("correlation model only; no live retrieval observer"),
+        ),
+        capability(
+            CapabilityId::PersistentEffectAfterInitialRemoval,
+            CoverageStatus::ImplementedTested,
+            RuntimeAvailability::Unavailable,
+            Some("static/synthetic persistence state model"),
+        ),
+        capability(
+            CapabilityId::StaticCapabilityHints,
+            CoverageStatus::ImplementedTested,
+            RuntimeAvailability::Unavailable,
+            Some("symbols do not establish runtime behavior"),
+        ),
+        capability(
+            CapabilityId::SourceClaimGovernance,
+            CoverageStatus::ImplementedTested,
+            RuntimeAvailability::Available,
+            Some("secondary claims remain historical until corroborated"),
         ),
     ]
 }
@@ -179,30 +328,87 @@ pub fn engine_statuses() -> Vec<EngineStatus> {
 
 #[must_use]
 pub fn product_honesty_invariants() -> Vec<&'static str> {
-    vec![
-        "EXTERNAL_REPORT != MALICIOUS_VERDICT",
-        "IOC_MATCH != FAMILY_ATTRIBUTION",
-        "SIGNED != SAFE",
-        "NOTARIZED != SAFE",
-        "TRUSTED_PUBLISHING != SAFE",
-        "REGISTRY_SCANNED != ENDPOINT_SAFE",
-        "UPSTREAM_FIXED != LOCAL_ENDPOINT_CLEAN",
-        "STATIC_ONLY != SAFE",
-        "STATIC_BINARY_CLEAN != RUNTIME_BEHAVIOR_CLEAN",
-        "ML_SCORE != MALICIOUS",
-        "SCANNER_FAILURE != CLEAN",
-        "ENGINE_FAILURE != CLEAN",
-    ]
+    ProductHonestyInvariant::ALL
+        .iter()
+        .map(|item| item.as_str())
+        .collect()
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum ProductHonestyInvariant {
+    ExternalReport,
+    IocMatch,
+    Signed,
+    Notarized,
+    TrustedPublishing,
+    RegistryScanned,
+    UpstreamFixed,
+    StaticOnly,
+    StaticBinaryClean,
+    MlScore,
+    ScannerFailure,
+    EngineFailure,
+    CleanRepository,
+    InitialArtifactRemoved,
+    SymbolPresent,
+    SecondarySeverityAmplification,
+    FeedNew,
+}
+
+impl ProductHonestyInvariant {
+    pub const ALL: [Self; 17] = [
+        Self::ExternalReport,
+        Self::IocMatch,
+        Self::Signed,
+        Self::Notarized,
+        Self::TrustedPublishing,
+        Self::RegistryScanned,
+        Self::UpstreamFixed,
+        Self::StaticOnly,
+        Self::StaticBinaryClean,
+        Self::MlScore,
+        Self::ScannerFailure,
+        Self::EngineFailure,
+        Self::CleanRepository,
+        Self::InitialArtifactRemoved,
+        Self::SymbolPresent,
+        Self::SecondarySeverityAmplification,
+        Self::FeedNew,
+    ];
+
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::ExternalReport => "EXTERNAL_REPORT != MALICIOUS_VERDICT",
+            Self::IocMatch => "IOC_MATCH != FAMILY_ATTRIBUTION",
+            Self::Signed => "SIGNED != SAFE",
+            Self::Notarized => "NOTARIZED != SAFE",
+            Self::TrustedPublishing => "TRUSTED_PUBLISHING != SAFE",
+            Self::RegistryScanned => "REGISTRY_SCANNED != ENDPOINT_SAFE",
+            Self::UpstreamFixed => "UPSTREAM_FIXED != LOCAL_ENDPOINT_CLEAN",
+            Self::StaticOnly => "STATIC_ONLY != SAFE",
+            Self::StaticBinaryClean => "STATIC_BINARY_CLEAN != RUNTIME_BEHAVIOR_CLEAN",
+            Self::MlScore => "ML_SCORE != MALICIOUS",
+            Self::ScannerFailure => "SCANNER_FAILURE != CLEAN",
+            Self::EngineFailure => "ENGINE_FAILURE != CLEAN",
+            Self::CleanRepository => "CLEAN_REPOSITORY != CLEAN_DEPENDENCY_GRAPH",
+            Self::InitialArtifactRemoved => "INITIAL_ARTIFACT_REMOVED != PERSISTENCE_REMOVED",
+            Self::SymbolPresent => "SYMBOL_PRESENT != CAPABILITY_OBSERVED",
+            Self::SecondarySeverityAmplification => {
+                "SECONDARY_SEVERITY_AMPLIFICATION != VERIFIED_IMPACT"
+            }
+            Self::FeedNew => "FEED_NEW != THREAT_NEW",
+        }
+    }
 }
 
 fn capability(
-    capability: &str,
+    capability: CapabilityId,
     status: CoverageStatus,
     runtime_observation: RuntimeAvailability,
     limitation: Option<&str>,
 ) -> CapabilityCoverage {
     CapabilityCoverage {
-        capability: capability.to_owned(),
+        capability,
         status,
         runtime_observation,
         limitation: limitation.map(ToOwned::to_owned),
@@ -247,23 +453,39 @@ mod tests {
     }
 
     #[test]
+    fn coverage_catalogue_is_typed_unique_and_complete() {
+        let catalogue = capability_coverage();
+        let ids: std::collections::BTreeSet<_> =
+            catalogue.iter().map(|row| row.capability).collect();
+        assert_eq!(ids.len(), catalogue.len());
+        assert_eq!(ids.len(), CapabilityId::ALL.len());
+        assert!(CapabilityId::ALL.iter().all(|id| ids.contains(id)));
+    }
+
+    #[test]
+    fn coverage_runtime_honesty_is_universal() {
+        for row in capability_coverage() {
+            assert!(
+                !(row.runtime_observation == RuntimeAvailability::Unavailable
+                    && row.status == CoverageStatus::ImplementedTested
+                    && row.limitation.is_none())
+            );
+            if row.status == CoverageStatus::BlockedByTelemetry {
+                assert_eq!(row.runtime_observation, RuntimeAvailability::Unavailable);
+            }
+        }
+    }
+
+    #[test]
     fn absent_observers_cannot_report_runtime_coverage() {
         // Arrange / Act
         let coverage = capability_coverage();
 
         // Assert
-        for capability_name in [
-            "CLICKFIX_TERMINAL_CHAIN",
-            "XCODE_BUILD_TRIGGERED_EXECUTION",
-            "PREFERENCES_ENCODED_PERSISTENCE",
-            "MACOS_SECURITY_CONTROL_IMPAIRMENT",
-        ] {
-            let item = coverage
-                .iter()
-                .find(|item| item.capability == capability_name)
-                .unwrap();
-            assert_eq!(item.status, CoverageStatus::BlockedByTelemetry);
-            assert_eq!(item.runtime_observation, RuntimeAvailability::Unavailable);
+        for item in coverage {
+            if item.status == CoverageStatus::BlockedByTelemetry {
+                assert_eq!(item.runtime_observation, RuntimeAvailability::Unavailable);
+            }
         }
     }
 
@@ -273,8 +495,55 @@ mod tests {
         let invariants = product_honesty_invariants();
 
         // Assert
-        assert!(invariants.contains(&"SCANNER_FAILURE != CLEAN"));
-        assert!(invariants.contains(&"ENGINE_FAILURE != CLEAN"));
-        assert!(invariants.contains(&"IOC_MATCH != FAMILY_ATTRIBUTION"));
+        let canonical: Vec<_> = ProductHonestyInvariant::ALL
+            .iter()
+            .map(|item| item.as_str())
+            .collect();
+        assert_eq!(invariants, canonical);
+        let unique: std::collections::BTreeSet<_> = invariants.iter().copied().collect();
+        assert_eq!(unique.len(), invariants.len());
+    }
+
+    #[test]
+    fn stronger_secondary_claim_is_retained_but_not_promoted() {
+        let claims = vec![
+            SourceClaim {
+                source_id: "primary".to_owned(),
+                source_type: SourceProvenanceClass::PrimaryResearch,
+                claim: "auth bypass".to_owned(),
+                impact: "authentication bypass".to_owned(),
+                verification: ClaimVerificationState::Verified,
+                published_at: Some("2026-08-12".to_owned()),
+                feed_ingested_at: Some("2026-08-12".to_owned()),
+            },
+            SourceClaim {
+                source_id: "secondary".to_owned(),
+                source_type: SourceProvenanceClass::Secondary,
+                claim: "headline".to_owned(),
+                impact: "root RCE".to_owned(),
+                verification: ClaimVerificationState::UnsupportedByPrimary,
+                published_at: None,
+                feed_ingested_at: Some("2026-08-12".to_owned()),
+            },
+        ];
+        let canonical = resolve_canonical_impact(&claims).unwrap();
+        assert_eq!(canonical.impact, "authentication bypass");
+        assert_eq!(canonical.verification, ClaimVerificationState::Verified);
+        assert!(
+            !claims
+                .iter()
+                .any(|claim| claim.impact == canonical.impact && claim.source_id == "secondary")
+        );
+    }
+
+    #[test]
+    fn feed_ingestion_does_not_rewrite_report_age() {
+        let recency = FeedRecency {
+            first_seen: Some("2024-01-01".to_owned()),
+            published_at: Some("2024-01-01".to_owned()),
+            feed_ingested_at: Some("2026-08-12".to_owned()),
+            observed_at: None,
+        };
+        assert_ne!(recency.first_seen, recency.feed_ingested_at);
     }
 }

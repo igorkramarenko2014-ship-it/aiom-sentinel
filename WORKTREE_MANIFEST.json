@@ -1,0 +1,1439 @@
+{
+  "schema": "aiom-sentinel-review-remediated/v2",
+  "repo": "AIOM Sentinel",
+  "branch": "feat/sentinel-yara-spike",
+  "base_head": "efd1fbcae49ed6dcb2465ba620e38dea42962f26",
+  "upstream": "efd1fbcae49ed6dcb2465ba620e38dea42962f26",
+  "dirty": true,
+  "rustc": "rustc 1.93.0 (254b59607 2026-01-19)",
+  "cargo": "cargo 1.93.0 (083ac5135 2025-12-15)",
+  "static_test_census_not_authoritative": true,
+  "runtime_tests_enumerated": 145,
+  "runtime_tests_executed_passed": 145,
+  "runtime_tests_failed": 0,
+  "tracked_modified_files": [
+    "crates/sentinel-core/src/threat_coverage.rs",
+    "crates/sentinel-scanner/src/macos_analysis.rs",
+    "crates/sentinel-scanner/src/supply_chain_analysis.rs"
+  ],
+  "new_payload_files": [
+    "01_START_HERE.md",
+    "BASELINE_BEFORE_12AUG.md",
+    "IMPLEMENTATION_RECEIPT_12AUG.md",
+    "12AUG_SIGNAL_COVERAGE.md",
+    "12AUG_FALSE_POSITIVE_MATRIX.md",
+    "12AUG_PRODUCT_HONESTY.md",
+    "docs/research/MACOS_THREAT_DELTA_PROVENANCE_2026-08-12.md",
+    "S01_TEST_COUNT_RECONCILIATION.md",
+    "S02_S03_COVERAGE_HONESTY_CLOSURE.md",
+    "REMEDIATION_RECEIPT.md"
+  ],
+  "excluded_generated_paths": [
+    ".git/",
+    "target/",
+    "node_modules/",
+    "dist/",
+    "__pycache__/",
+    "credentials",
+    "private keys",
+    "secrets",
+    "malware"
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 1321,
+      "sha256": "7c02349a88f38cfe37ed7ae0662dee8b8b6630284f5d0e8cd27ce1d7b3d89ca6"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 293,
+      "sha256": "09aa2edd0b7817880fb2d1277cafec68c567afce93f0a438c5ff5ffec0e819ed"
+    },
+    {
+      "path": "01_START_HERE.md",
+      "bytes": 1399,
+      "sha256": "4ddf568509e94df0cdd0f27ccf2246057bae51bc70eee87500060688610aec04"
+    },
+    {
+      "path": "12AUG_FALSE_POSITIVE_MATRIX.md",
+      "bytes": 591,
+      "sha256": "4dc72e726c9d08fba73f342986f1f94875ae7a98c5639d282c8c79c39c3ad803"
+    },
+    {
+      "path": "12AUG_PRODUCT_HONESTY.md",
+      "bytes": 622,
+      "sha256": "02f89b838fd4252c59de716b382dcebcf501d83a19c0a9f548a8c9218d917f1e"
+    },
+    {
+      "path": "12AUG_SIGNAL_COVERAGE.md",
+      "bytes": 1398,
+      "sha256": "649191348924ea872fe5f0ab31e94034913f93787fcc88bdd25fdc2359f9b27c"
+    },
+    {
+      "path": "BASELINE_BEFORE_12AUG.md",
+      "bytes": 732,
+      "sha256": "04a4a5e87202c2dacc82a074052a1c3b58d4ba8fcc26bd6051936c0ae775d43f"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "bytes": 345,
+      "sha256": "215112b0733674a1cccb38a51becebe8a45c805f6cd5bb07c7017e02ca35051b"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 70324,
+      "sha256": "52d6ccce228b3ef60c396af6e77f25c8b937b4b15151c840550d07add2b9ca2b"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 1503,
+      "sha256": "fa2aacdea162ccce7ba30d79d21f6d055e308b01634b44554d9b09647da79b80"
+    },
+    {
+      "path": "Command Gate/README.md",
+      "bytes": 480,
+      "sha256": "d74938ed5ff9e2cd8f622e4bb50f8534a2ff99045a4bebd5c01e7581bf687600"
+    },
+    {
+      "path": "Command Gate/requirements-dev.txt",
+      "bytes": 21,
+      "sha256": "56e6301f491d336997805ec0e824b163ce5797a708440d68f52b6c3e60d63909"
+    },
+    {
+      "path": "Command Gate/tools/verify_release.py",
+      "bytes": 2631,
+      "sha256": "220052595cbe99d501d6a114dd5d65439e513dbca8a85167829702affc9358cc"
+    },
+    {
+      "path": "IMPLEMENTATION_RECEIPT_12AUG.md",
+      "bytes": 1034,
+      "sha256": "9a5a6f9c9e96e359bac695a2138b9db2bb99e3a1bd8c8d36c650b42b85fef9be"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1083,
+      "sha256": "bb20a7f42e10d9299a20a9d30d508c00c955973a15e78b58a9184e244467ec1c"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5749,
+      "sha256": "1f92f9062bcb465d7af32c839cbfaed59a4ce8a5f3f46a06c0aa5ccae1082b16"
+    },
+    {
+      "path": "REMEDIATION_RECEIPT.md",
+      "bytes": 1060,
+      "sha256": "fb06162d278810d1cecaa73adea0a160d731237559adffeb8c686cc4009b9764"
+    },
+    {
+      "path": "S01_TEST_COUNT_RECONCILIATION.md",
+      "bytes": 591,
+      "sha256": "911ee4e7c5d27706227681439b57dce4c7915585fbcc575ed0d0e8e1c31baa08"
+    },
+    {
+      "path": "S02_S03_COVERAGE_HONESTY_CLOSURE.md",
+      "bytes": 794,
+      "sha256": "a4135517f14aba989332117100d5edfd2dc6ce10f901993f3c25e3108a3b3e2f"
+    },
+    {
+      "path": "SECURITY.md",
+      "bytes": 1017,
+      "sha256": "39d517fba8064b491d5ceed4bba43756e3adcbd159b3684be80cbef55c828db2"
+    },
+    {
+      "path": "VERIFIED_WORKTREE.patch",
+      "bytes": 31362,
+      "sha256": "1c574b242fbe0ca5a5237f3a42c1658fdd423ec627ed0d5cf0595d4182054f56"
+    },
+    {
+      "path": "apps/sentinel-desktop/index.html",
+      "bytes": 258,
+      "sha256": "a3b33e7ce87a64545e8d828c64a79e231b6d0d8b0c0ed209ced13d3204b8ca17"
+    },
+    {
+      "path": "apps/sentinel-desktop/package.json",
+      "bytes": 583,
+      "sha256": "8012a24872179f18a27c41becda8edadbba51b8c4054bc513d0df8b2c85c41d9"
+    },
+    {
+      "path": "apps/sentinel-desktop/pnpm-lock.yaml",
+      "bytes": 24078,
+      "sha256": "cafdb3a7078367982aabb90029af3652d70536733429d946405015d7d50b702f"
+    },
+    {
+      "path": "apps/sentinel-desktop/resources/rules/sentinel-default.rules",
+      "bytes": 109,
+      "sha256": "1fcb5dc258eb2242953f372d0636afd5eb77609d528d8ac1cfdeb23bd7b90074"
+    },
+    {
+      "path": "apps/sentinel-desktop/resources/rules/sentinel-default.rules.sha256",
+      "bytes": 65,
+      "sha256": "5ab86fd4db0e183a30362faf912bb48aae0a7f231d86481e6b6d55071009f1a7"
+    },
+    {
+      "path": "apps/sentinel-desktop/resources/rules/sentinel-default.yar",
+      "bytes": 284,
+      "sha256": "9dc5a5da13920ab5f8ff60fc323ff0ee8559e495e4517518fd1b107f9ddd20b3"
+    },
+    {
+      "path": "apps/sentinel-desktop/resources/rules/sentinel-default.yar.sha256",
+      "bytes": 65,
+      "sha256": "e1fe7e1dba058d540f8197fc981a354f193cc0729ec46a48853632bde2bbe224"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/.gitignore",
+      "bytes": 86,
+      "sha256": "646a917f23a3d76736252fac394b218e99c3f2d7f5c4dad9e334563452574cde"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/Cargo.lock",
+      "bytes": 151812,
+      "sha256": "190363d03a58dfaed97db1d508deb31a220d0bda77ec811b359963b1e6c0097b"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/Cargo.toml",
+      "bytes": 1034,
+      "sha256": "236c5332ae5c369df630045715273ebca34b8cabc5aa672df130321fb264df45"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/build.rs",
+      "bytes": 39,
+      "sha256": "487059eaf8a947b80f20a9aacac038a5047b2ad69d2401b827376c67d6fe847f"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/capabilities/default.json",
+      "bytes": 228,
+      "sha256": "d4a77a4da1f705ef63cdcbd001c54cb6b789d41043718463ca1a184e6b5ae5b8"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/128x128.png",
+      "bytes": 11059,
+      "sha256": "eeebf55d8ffe07348786b9057af253e3ca08c56b6a8f8893826381430e3c0b7b"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/128x128@2x.png",
+      "bytes": 23137,
+      "sha256": "2998b41d0c9278b08e8b3874e094920034fe983a46053c9d62764225f58ab7b0"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/32x32.png",
+      "bytes": 2225,
+      "sha256": "aaa96d0c53b756b77c7f46aeb72290f42256c786c69be68f6bcdeb9c7492a48e"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/Square107x107Logo.png",
+      "bytes": 9202,
+      "sha256": "33446a858d982a529554e562114673f8b15620588137cf0bf6c56a7441c78cd7"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/Square142x142Logo.png",
+      "bytes": 12530,
+      "sha256": "633d6dba504faa844b309e01272386e4523cddd4a3639c77c0eb5d2ce3eac752"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/Square150x150Logo.png",
+      "bytes": 13032,
+      "sha256": "d90061ad71e6f5882b759d80cf58cc16aa5021fa29ba4b2614adea982a4d7ee5"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/Square284x284Logo.png",
+      "bytes": 25943,
+      "sha256": "5feaa4f18f404843551756dd2791d7654ef471b6b007767ae40f60c7aebcad5b"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/Square30x30Logo.png",
+      "bytes": 2078,
+      "sha256": "68bc1b585f5685e0922f14b1ca7eb2d618213c684c89e759c6a5eb8578c3fe8d"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/Square310x310Logo.png",
+      "bytes": 28507,
+      "sha256": "5df8d779ab57c63ee06ed237b94c3c0954711e88117dccfa72b2aec5d83b0d80"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/Square44x44Logo.png",
+      "bytes": 3419,
+      "sha256": "c46208286b1ea1b4841b714972f3cb0a8abc6d3bfa71a29238f7b4d62f511f89"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/Square71x71Logo.png",
+      "bytes": 6027,
+      "sha256": "cb0ea93cbd13509d32c6bc06da71687e73d673d166fde91b23061771abe16b86"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/Square89x89Logo.png",
+      "bytes": 7551,
+      "sha256": "2208da1d741a20e902a59d7c39a5e58af74ec823db13113bf8ac6f555fa25bca"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/StoreLogo.png",
+      "bytes": 3971,
+      "sha256": "9f84d0ce09df51bac0a4855042b3e49b190cc2b9761cd5eab61ebec5cd343820"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/icon.icns",
+      "bytes": 277003,
+      "sha256": "1535d355994f8ee82da91384d2a29e04d5b4440f3e6051b5c8b06e7a62283693"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/icon.ico",
+      "bytes": 37710,
+      "sha256": "e38ca88e1d5490f3dcbc3c3fa525f7fcb7b80fff3cb2f3a4eb1b2d018c0915c1"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/icons/icon.png",
+      "bytes": 49979,
+      "sha256": "6413bfe9d546e5225fc9256a0ecec48df3a1272ea4bdc91c15b8e000222a95d3"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/src/lib.rs",
+      "bytes": 36271,
+      "sha256": "d4a8827e4adbf5c8a8f8497487f9e611b0d9748db6d41518a097e5fabc483b82"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/src/main.rs",
+      "bytes": 179,
+      "sha256": "e5dfab54c7a9843285d54ff5a783c00813cd3f28d1bb2f6982aa348697cbb1c4"
+    },
+    {
+      "path": "apps/sentinel-desktop/src-tauri/tauri.conf.json",
+      "bytes": 1213,
+      "sha256": "dbfa31027b49cfb36a48ed1564be667e84a64b65f1090391d0f19cddbfe9eaee"
+    },
+    {
+      "path": "apps/sentinel-desktop/src/main.ts",
+      "bytes": 18772,
+      "sha256": "02db8c44e0f20b6f9bceb5c14fe4d6b7cd11980ee85be7f4302503ecbdcf34d1"
+    },
+    {
+      "path": "apps/sentinel-desktop/src/style.css",
+      "bytes": 2698,
+      "sha256": "d8eaf981004e16a3d5cc34d25d096d28f9fe660a9ae95d7d6d8b4d38cbb575b9"
+    },
+    {
+      "path": "apps/sentinel-desktop/tsconfig.json",
+      "bytes": 153,
+      "sha256": "09cb0b3f76c047f6e1918321947cd82c110193e8ff6bab3595d797dfd84d6b45"
+    },
+    {
+      "path": "apps/sentinel-desktop/vite.config.ts",
+      "bytes": 132,
+      "sha256": "36f993ea32e209fb3f7eb499b2f570677de095ee666533badf3c25abc37e077a"
+    },
+    {
+      "path": "apps/sentinel-desktop/yara_multi_loader.py",
+      "bytes": 6712,
+      "sha256": "f7e2cd752c57bf8e9f6fdfb27c869a0d052b40b7f1373141be64469c90193e47"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/00_INPUT_RECEIPT.md",
+      "bytes": 47,
+      "sha256": "afde23bfd35b60e760a37206832bd280aebfd28ec2cef3bffb0d979cf9cd490c"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/01_SCOPE_AND_NON_GOALS.md",
+      "bytes": 45,
+      "sha256": "84cd42b4d56ee3428274065e6adbf2906d48bea5d66a21fc802dd08d0efcf157"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/CANONICAL_SERIALIZATION_CONTRACT.md",
+      "bytes": 25,
+      "sha256": "6a4724d20e208fd39cdcaf5789857ef35176a02e2ed76957f0420bd2e9d8e268"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/CONTRACT_INDEX.md",
+      "bytes": 19,
+      "sha256": "6067b187210f4fe0149e317344094141f9e263ee61539559272520263aacba38"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/DETERMINISM_CONTRACT.md",
+      "bytes": 34,
+      "sha256": "92115378f9198c6a29ddb0ae06c8c16ccf12188ab0b8b27c4e8399ada71f5dd6"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/INDEPENDENT_VERIFIER_SPEC.md",
+      "bytes": 23,
+      "sha256": "b3ef0e8c113209c00cf19c540d22fd89df25d15dbc701188b4efe0cc0dcbbf46"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/LICENSE_NOTES.md",
+      "bytes": 32,
+      "sha256": "dc360f160df3efa6001377034ce07644d29d7378c5d986acb9206f544520aa4a"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/LOADER_STATE_CONTRACT.md",
+      "bytes": 21,
+      "sha256": "7f984d6dfde94c42c2f0cdcf762ee6258144b115e684ba223320b5f5a411774c"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/MANIFEST.json",
+      "bytes": 11344,
+      "sha256": "bca5890cf2bd56b47fc44a08628678d2bf65911a14b4e7c0dec97134c99b54c2"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/NEGATIVE_TEST_REPORT.md",
+      "bytes": 34,
+      "sha256": "dfdbcce571eb911d2beb86c2bd60b766d8280377ed66202b9da5807d916b5252"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/PACK_STATUS.json",
+      "bytes": 406,
+      "sha256": "28b53d753c29ed036367699036060e695c797e05a5da34d158968910bb05c52c"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/README.md",
+      "bytes": 58,
+      "sha256": "fc637d8736a56ab14dab8cef997764a5d660a33bd6de60111de2eb25ba4b5958"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/SHA256SUMS.txt",
+      "bytes": 5686,
+      "sha256": "63627960505f4a859d3cba5c3adaac703c2aab32839c4475b6999e9b11d87db6"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/SIGNATURE_CONTEXT_CONTRACT.md",
+      "bytes": 31,
+      "sha256": "2f6b695c3f819dadecbc8d67f58d45cb6d5ed709ea276d4f137003ef1f6653c0"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/VERIFY_PACK.py",
+      "bytes": 12880,
+      "sha256": "1968aa6a5391556344088b9a541b957a3feac7dae5e612d4cddd64c5b023bdc7"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/compute_hashes.py",
+      "bytes": 2108,
+      "sha256": "d2684ffc99158a72c992f88edbf885687a7964062140726da32783592a859be5"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/actions_taken_nonempty.json",
+      "bytes": 28,
+      "sha256": "ef3f908d26b15626248235e09aa74a038ee92f91c5582d4215d35ee7eb857475"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/coverage_full_fail.json",
+      "bytes": 53,
+      "sha256": "617bd49f1ecfbea0ec0fd47c8a8021f876ba4a37d197a875b85129b481accfa8"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/duplicate_ruleid.json",
+      "bytes": 177,
+      "sha256": "d47233b4f6dc7dbd610ff3275e788163b1c85309b5439daaad105487efa8a594"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/expired_active.json",
+      "bytes": 196,
+      "sha256": "9e96f455bad180426c86fec88a2014335f7af1ff7837f96afbf27d70aae12e9e"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/external_deterministic.json",
+      "bytes": 82,
+      "sha256": "e4640faf66ac85f765510bddb6c5f488c7ea1ed6d05a41bf14d49c09a34fb289"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/fake_verified.json",
+      "bytes": 192,
+      "sha256": "b37ec922b06a141ff43bdfcfb1ec56218386260fdc023dfca745e8eb176c0633"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/lifecycle_invalid.json",
+      "bytes": 105,
+      "sha256": "4726af77b26bfe03cf304d6cd23ccb42e01420a9071da70110c5a3df13d47aa8"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/malformed_signature.json",
+      "bytes": 59,
+      "sha256": "cb3fa1afbf542d84d5156975a55b838015d13db1e6ce66a555c915195b4ff5b0"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/manifest_hash_mismatch.json",
+      "bytes": 621,
+      "sha256": "76574b81949adaf2ec01b168a745dd3bda990881f23b16744586c2ab201ac625"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/read_only_false.json",
+      "bytes": 19,
+      "sha256": "f591c798668ccf62e6605bd0d00560b089777c40b30f4ca2dff52486e6fd0437"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/revoked_ready.json",
+      "bytes": 132,
+      "sha256": "d5e8abebdc9b330fa3c29e1a89e6d51bb7112a3bce4a72310a1b1be817910b82"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/sha1_canonical.json",
+      "bytes": 216,
+      "sha256": "d2b4471f1fb2506e00c995f51c79665304db76923f44e9b97d2f581b173efd2c"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/unknown_capability.json",
+      "bytes": 630,
+      "sha256": "fed9cc9ca5988bad0869eb94afd223c65829ee9bd2c42458dd2dc7b4852d5504"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/unsafe_path.json",
+      "bytes": 20,
+      "sha256": "9164cf729b00637ba589934899b2030c70f04ff58655de01a2463748b3b1a482"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/unsigned_bundle.json",
+      "bytes": 40,
+      "sha256": "26ba7691cd605f5260a2e7f8d78f98600df052ef846a0f6a95e6e660f0efc855"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/invalid/wrong_hash_rule_id.json",
+      "bytes": 59,
+      "sha256": "3af4bbe74041507e96a608e57c42cd2002c37ac2ab8ded8fac6ef84eea567b21"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/bundle-file.json",
+      "bytes": 142,
+      "sha256": "b44ffbdcfdbea2890e3938554a4b3b6b7a31a2b784b8c853dedd2c9ad288345a"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/bundle-lifecycle.json",
+      "bytes": 589,
+      "sha256": "0bc4ce7bc689b3f9c239fef20a208b42249b11d5816d866943cc6f46a550bbcc"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/bundle-manifest.json",
+      "bytes": 774,
+      "sha256": "1a9dffe7860be9cd1e6380dec33ac853a99e961eb8f5d9d8114a7b17e7c2d4ee"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/compiler-identity.json",
+      "bytes": 167,
+      "sha256": "ae113a9b405e8b56e95d9d12ddc937b3ab73eeb4708684d35115334348e38845"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/compiler-receipt.json",
+      "bytes": 484,
+      "sha256": "c745dcf8adba483ce410e213ded99cd7c0c795bbd7b308552ee127aeed3a11cd"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/integrity-tier.json",
+      "bytes": 143,
+      "sha256": "4199d44fa74523677209a1e442743afbfc18e335554aa70abdd0ee076ec7b34e"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/loader-report.json",
+      "bytes": 366,
+      "sha256": "4f740376ed703c9365815c5abe44a5d3d15aa22409932e82868e32ba981bbe4d"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/loader-status.json",
+      "bytes": 216,
+      "sha256": "273acbf9da5d622e3a17debcb588a55fe7903f924181573802dae6eb495ac4f9"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/pack-status.json",
+      "bytes": 405,
+      "sha256": "d200413ea427c3f86a7491478a5862edb7fac7eeea15f5213cb1e238e3ae78c0"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/rejection-receipt.json",
+      "bytes": 206,
+      "sha256": "4800094b9b0f6ead92e5908fab8e20327b592272b118d12424541cb4021ba46b"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/rule-metadata.json",
+      "bytes": 255,
+      "sha256": "9fb7fd662c837efa57f05c0e01267dfcaaecd10126ed2c89f29550392afb9b67"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/rule-source.json",
+      "bytes": 242,
+      "sha256": "563fa072349bc1d631c3cc1755e1a3693651656a217365ce742edec53545f296"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/signature-envelope.json",
+      "bytes": 793,
+      "sha256": "e398173b1127101d88cbf347d4cbfb80dfbd3b6bd10f51c504f8881a46bbb97f"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/examples/valid/verification-receipt.json",
+      "bytes": 398,
+      "sha256": "7892c369b33c6747c39bb44317b52a6a7915b18c7b5c8c33e3a37d2f78817d5a"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/bundle-file.schema.json",
+      "bytes": 454,
+      "sha256": "f0c28c39daa02af4c55de42b801a6cfe8cb91ee42dd03bffbaaf186a0a1af865"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/bundle-lifecycle.schema.json",
+      "bytes": 850,
+      "sha256": "dbf9c15d90232e6cd1eacb3932959b5b192c139fcbb727c3a4ac749475983a3e"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/bundle-manifest.schema.json",
+      "bytes": 1274,
+      "sha256": "7dea87a6aefac505d4717b6d6d51dd7e61d90fb179d86505aa514ee24a046692"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/compiler-identity.schema.json",
+      "bytes": 446,
+      "sha256": "457c32952fa442c1c40a9f1612b186cc8ea6323eb49163f6f99d03146839afd2"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/compiler-receipt.schema.json",
+      "bytes": 704,
+      "sha256": "2cb470ea9383b67d78b744c481ea37d249513f6da75c8b940481d70e1f935afe"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/integrity-tier.schema.json",
+      "bytes": 392,
+      "sha256": "5682ec28581f922fc77d355fd3814cff9db7ed67d33e1fad88f1bc45329436f8"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/loader-report.schema.json",
+      "bytes": 1067,
+      "sha256": "c4e07403bc895b2f1b32c55b8ca73ea492a3c71c400346b97280c8189c51b840"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/loader-status.schema.json",
+      "bytes": 639,
+      "sha256": "26719fa9b145c684c611571a72844e7a31691ddd526951f0c1b89f27331a53e9"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/pack-status.schema.json",
+      "bytes": 896,
+      "sha256": "721d46dfa20b82e1cbfc76e4b216080884d658742c79d9046aa29410857c67b3"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/rejection-receipt.schema.json",
+      "bytes": 438,
+      "sha256": "9ed5d4812ed6a1c6d621e7399623a1784597a74b7c21a53016d8c9105247afab"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/rule-metadata.schema.json",
+      "bytes": 769,
+      "sha256": "4ffe9925900f18ab0d53aa562086a49e14ef56d434151066fec04e20190975d1"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/rule-source.schema.json",
+      "bytes": 526,
+      "sha256": "1e352447ad567e7455f7b7303f411194b36ce5f3c89764c6f708338a45522979"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/signature-envelope.schema.json",
+      "bytes": 1670,
+      "sha256": "0f41f05b772895de05320b82b49ebb8f622d57d898a15d77ff83670af2c1d663"
+    },
+    {
+      "path": "architecture-input/AIOM_SENTINEL_RULE_COMPILER_AUTOLOADER_CANONICAL_BASIS_v1.1/schemas/verification-receipt.schema.json",
+      "bytes": 921,
+      "sha256": "760cec1388d4a03acc463613480a2f020913a71497fd05ba62969791bc57b305"
+    },
+    {
+      "path": "architecture-input/SOURCE_CORPUS_RECEIPT.json",
+      "bytes": 653,
+      "sha256": "a414b094e715c20169c72003f3764fbb1fb6f9c5d1865dddd4f60057739d2aed"
+    },
+    {
+      "path": "benches/README.md",
+      "bytes": 269,
+      "sha256": "e1fcdab1210470e394f1385b69be3cf0392e20f85ff05dcc2fbb1ae75595309e"
+    },
+    {
+      "path": "config/rule-bundle-public-keys.json",
+      "bytes": 40,
+      "sha256": "2be8440e9e3f564d5f1a5e930aa9e75f15fe492145cefd8804b5b12cbb0a6924"
+    },
+    {
+      "path": "config/rule-bundle-public-keys.schema.json",
+      "bytes": 971,
+      "sha256": "f9c37734f891e88829f13464eb56e65fa1206d1ac3e5dbb0a5bb0ca8d3af2c25"
+    },
+    {
+      "path": "crates/sentinel-cli/Cargo.toml",
+      "bytes": 614,
+      "sha256": "a6a254a142353b35faa30c7db3bda49eab180a13d59f78c509da50c85af73c2b"
+    },
+    {
+      "path": "crates/sentinel-cli/src/main.rs",
+      "bytes": 11503,
+      "sha256": "1bfa346763d990d59a5fbd8dda20b1b3cc144f8d8685ad43aee6c5634178f0a7"
+    },
+    {
+      "path": "crates/sentinel-core/Cargo.toml",
+      "bytes": 346,
+      "sha256": "4a558fa11d82a7ae18ef715e1399cc22c2a3fb5e44a5e15ac62b24358159e886"
+    },
+    {
+      "path": "crates/sentinel-core/src/lib.rs",
+      "bytes": 17399,
+      "sha256": "ffb5108a9bfec53108d75ddd30d37e03ba62cf768d84ef7f27ed274e05527b65"
+    },
+    {
+      "path": "crates/sentinel-core/src/threat_coverage.rs",
+      "bytes": 17841,
+      "sha256": "619339a564956ab431f07077ce98fd52f7cae8865d51b615199fc02c1b08a5dd"
+    },
+    {
+      "path": "crates/sentinel-evidence/Cargo.toml",
+      "bytes": 303,
+      "sha256": "37b93d880b6770bc0ce876adf1378006892a12de31ad6c856beb59cf31343f7b"
+    },
+    {
+      "path": "crates/sentinel-evidence/src/lib.rs",
+      "bytes": 4831,
+      "sha256": "6fd6fb7ecd8c138301d6cf03cc8f13507009f8a1798abf44f98348c48c421c0b"
+    },
+    {
+      "path": "crates/sentinel-hash/Cargo.toml",
+      "bytes": 406,
+      "sha256": "3a2f345be16c21738a9542aa05404bbff300aac00b398b7afb3c0ead36bdc6ac"
+    },
+    {
+      "path": "crates/sentinel-hash/src/lib.rs",
+      "bytes": 3385,
+      "sha256": "e8bdc3fbcfbd852c248bfed66c93d4e4dfbb13585c01accc2f06990e5adc72c9"
+    },
+    {
+      "path": "crates/sentinel-pe/Cargo.toml",
+      "bytes": 297,
+      "sha256": "7264b5d10bb8351925acf5d68160f2055cb3464e5a9bdbd26edfe8d69e7af352"
+    },
+    {
+      "path": "crates/sentinel-pe/src/lib.rs",
+      "bytes": 4667,
+      "sha256": "8a733b395786bc1f20998324966c60b4b259cd7d0443e5f8c36efa85e1d9afd1"
+    },
+    {
+      "path": "crates/sentinel-product-dto/Cargo.toml",
+      "bytes": 284,
+      "sha256": "31f403f4c46331646f203b377bc3924781f87099e1d23bd5224394fbd280e9b9"
+    },
+    {
+      "path": "crates/sentinel-product-dto/src/lib.rs",
+      "bytes": 11671,
+      "sha256": "c2dd1d8f8595b7cee6fb586ff2bbc167f804c6ad891f01246527b268f099ffd2"
+    },
+    {
+      "path": "crates/sentinel-product-service/Cargo.toml",
+      "bytes": 729,
+      "sha256": "5a66e5f128719ad70cf7b60d3ef52385e4a35d839528b723384b88de2ba7d482"
+    },
+    {
+      "path": "crates/sentinel-product-service/src/audit_policy.rs",
+      "bytes": 11906,
+      "sha256": "70ecd26a1eec370ee56020d92d8e8db75d76bcf3ef52d4aba9632eaeb3ce9f6f"
+    },
+    {
+      "path": "crates/sentinel-product-service/src/bin/slice3b_f_demos.rs",
+      "bytes": 13522,
+      "sha256": "a2bad5d081c45024b3cf96dab5ab1a0068be00f8f563a7f1723df6a51d576ff8"
+    },
+    {
+      "path": "crates/sentinel-product-service/src/bin/slice3c_demo.rs",
+      "bytes": 5127,
+      "sha256": "d86dc3f409dc4a5cd9dbffb2df4d22ec58b4735567d41f342b6a1f69ac9876ff"
+    },
+    {
+      "path": "crates/sentinel-product-service/src/container.rs",
+      "bytes": 6670,
+      "sha256": "d9220a9c019b50e7a9df266b168c0aaf8193d30537b615acba9bcd96546cf263"
+    },
+    {
+      "path": "crates/sentinel-product-service/src/lib.rs",
+      "bytes": 35022,
+      "sha256": "b7832de30d58fd1da27209c424311b1959bce83cd5b95c87597083a9dc6c8751"
+    },
+    {
+      "path": "crates/sentinel-product-service/src/pack_update.rs",
+      "bytes": 924,
+      "sha256": "938e1135627e04034e33d2397baac8b6a71342750ce8aeab6e4f036a0a7d92bb"
+    },
+    {
+      "path": "crates/sentinel-product-service/src/quarantine.rs",
+      "bytes": 3374,
+      "sha256": "25eeccb33f0db9c8f033c4b6e1d29e18b1a8b03ccf42d095185e0337722320a3"
+    },
+    {
+      "path": "crates/sentinel-product-service/src/transactional.rs",
+      "bytes": 108587,
+      "sha256": "4c772442fd8762de90f2884bcf2fa23d912eb0bc03d531be9eb87a518459a674"
+    },
+    {
+      "path": "crates/sentinel-product-service/src/watcher.rs",
+      "bytes": 9496,
+      "sha256": "fbcaa2b884c294ff5148554976206c80bd2a5b5a1da406fa089fd61511927900"
+    },
+    {
+      "path": "crates/sentinel-rules/Cargo.toml",
+      "bytes": 403,
+      "sha256": "17df8cf4c7dcd88a52ad53562f23cc917618387f3252e886495a56bca5eb20a5"
+    },
+    {
+      "path": "crates/sentinel-rules/src/lib.rs",
+      "bytes": 22336,
+      "sha256": "b757b8b82c12480aa8ace3015f1e43bda8b61e25ea90e669dc4e1a641bc5c368"
+    },
+    {
+      "path": "crates/sentinel-rules/src/signature.rs",
+      "bytes": 13489,
+      "sha256": "2d0a0b60b6e2d9d9a6b572cad0bf04978d8b6dcd83916a6613c5e1d32dda4839"
+    },
+    {
+      "path": "crates/sentinel-scanner/Cargo.toml",
+      "bytes": 696,
+      "sha256": "c6a9a6d45ad4b33d9012d2d852657d3c1e284011caf3fc8a7cfcce34b6679b65"
+    },
+    {
+      "path": "crates/sentinel-scanner/benches/scanner.rs",
+      "bytes": 1029,
+      "sha256": "ac86b126f73afb8c4f41b4dd1792e8c10faf666fb02ee2e3b3dfe4a76cf1fadc"
+    },
+    {
+      "path": "crates/sentinel-scanner/src/lib.rs",
+      "bytes": 33658,
+      "sha256": "b554ee83afdd99fe2a0463b219a00ed4fb0e0e1254b65f3a04a59012c317f0cf"
+    },
+    {
+      "path": "crates/sentinel-scanner/src/macos_analysis.rs",
+      "bytes": 17580,
+      "sha256": "ae2b3d146eed0dfd22de52422c26a1a91626ca09fb2127b88b6c636a2d20dcc4"
+    },
+    {
+      "path": "crates/sentinel-scanner/src/supply_chain_analysis.rs",
+      "bytes": 21921,
+      "sha256": "37621053c575764b58dfd93e74ef11690f24dd7bea4e9d27598d68077abec5df"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "bytes": 2470,
+      "sha256": "a1e8384193905b37795edfac3598de7794c5aa5a861420367216dcc3e33a28a3"
+    },
+    {
+      "path": "docs/EVIDENCE-CONTRACT.md",
+      "bytes": 869,
+      "sha256": "9e61a09c25bcea51bf1a64c8cc197b247d3dd56eec7469aa3b62ceb0d06aac2e"
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "bytes": 370,
+      "sha256": "0da91e6f259ce4b8fd5449a71b6cc1ed4f30d34c5bf2a78a6b6aa54c20925fcc"
+    },
+    {
+      "path": "docs/THREAT-MODEL.md",
+      "bytes": 780,
+      "sha256": "b67f2449f0a265ea12350149b3dea18a2e8b961441e3b347fbabcf5baff3d415"
+    },
+    {
+      "path": "docs/VERIFICATION.md",
+      "bytes": 993,
+      "sha256": "2aa013e9e80a3b02ffcb0fddc82f4743bee44758cbd0fdb16413d3e836db1314"
+    },
+    {
+      "path": "docs/adr/ADR-001-FAILURE-SEMANTICS.md",
+      "bytes": 1190,
+      "sha256": "cd7fd36279eb55e3eca13bb336e82a4507acaef313a9b75e91ced27a4303d6ff"
+    },
+    {
+      "path": "docs/adr/ADR-002-WORKER-ISOLATION.md",
+      "bytes": 1228,
+      "sha256": "af2a9ddacdcaaf277369810bc01d0182dbcd19735b007549086ef2778f5ac5ed"
+    },
+    {
+      "path": "docs/adr/ADR-003-EVIDENCE-INTEGRITY.md",
+      "bytes": 1317,
+      "sha256": "11178fdb02939cc7473fe6ac0b7dcaf3a1777b57828e6d23f23671fcbe481d95"
+    },
+    {
+      "path": "docs/adr/ADR-004-UPDATE-TRUST.md",
+      "bytes": 1283,
+      "sha256": "9a7f0547d87c595de29914c289ec3ad8624960108afdea535ee7edd37e568f2e"
+    },
+    {
+      "path": "docs/adr/ADR-005-PLATFORM-COLLECTOR-BOUNDARIES.md",
+      "bytes": 1297,
+      "sha256": "5b8682c30c2eb0f7ca657c1a79b6f44c07806b40ad64cde3d61e5e0db23b928f"
+    },
+    {
+      "path": "docs/adr/ADR-006-QUARANTINE-KEY-MANAGEMENT.md",
+      "bytes": 1310,
+      "sha256": "6af4a4f06c746c023584f3a1e02bf4d36718980851e9603efc46e1d3c10b054c"
+    },
+    {
+      "path": "docs/adr/ADR-007-PLUGIN-CAPABILITY-MODEL.md",
+      "bytes": 1302,
+      "sha256": "62d92fa0d02a33f1e64d990f6f6a3833e59b44424828bc0ca2be93be541dc8d5"
+    },
+    {
+      "path": "docs/adr/ADR-008-PERFORMANCE-BUDGETS.md",
+      "bytes": 1317,
+      "sha256": "4c6aba51903a31902a6b741e0b4f743607c70228b9014db675d9e96b5f60a697"
+    },
+    {
+      "path": "docs/adr/ADR-009-DETECTION-SCORING.md",
+      "bytes": 1347,
+      "sha256": "9ca23fbf500eef8225228190ec45164257fd0764f3a564663b35c7c975df7dc5"
+    },
+    {
+      "path": "docs/adr/ADR-010-RESPONSE-AUTHORITY.md",
+      "bytes": 1427,
+      "sha256": "05d5aca1299c551fa6d203c466aaec546a3db05851fee729c190366b89da87e1"
+    },
+    {
+      "path": "docs/adr/ADR-011-AI-OUTSIDE-ENFORCEMENT-BOUNDARY.md",
+      "bytes": 1113,
+      "sha256": "170065164af0d3083963d4aa76b33850968289548bcea4aec8c6ef71ac8fbb1f"
+    },
+    {
+      "path": "docs/adr/ADR-012-CROSS-PLATFORM-FROM-ORIGIN.md",
+      "bytes": 952,
+      "sha256": "2b5686b6a1831087ffbe5e4bb23492606bee7295140e30fa11acc125ccdd606d"
+    },
+    {
+      "path": "docs/adr/ADR-013-PRIVACY-SHIELD-SCOPE-SEPARATION.md",
+      "bytes": 947,
+      "sha256": "d50f3d60754552e445696148d08747a8012c20de37e3591496a71b8456e5138c"
+    },
+    {
+      "path": "docs/adr/ADR-014-UNTRUSTED-SAMPLE-ISOLATION.md",
+      "bytes": 946,
+      "sha256": "68adcdc8cc4f78c8e06118b94fd681e6647d6784bf60de572cef393785543c58"
+    },
+    {
+      "path": "docs/adr/ADR-015-RUST-CORE-AND-COMPATIBLE-NATIVE-ADAPTERS.md",
+      "bytes": 748,
+      "sha256": "4e2a26bc9563fb8c541efdce5d4f4d032c544abbb283368997cd4034fe9a55fc"
+    },
+    {
+      "path": "docs/adr/ADR-016-C-AS-CANONICAL-NATIVE-ABI.md",
+      "bytes": 758,
+      "sha256": "f327385aff33ce2ff7208ec30ec00d12d7f2c729abb66a0b4506d0cf3f0593b7"
+    },
+    {
+      "path": "docs/adr/ADR-017-PERSONAL-DEVICE-POLICY-AUTHORITY.md",
+      "bytes": 805,
+      "sha256": "d6232d64242c10ae4be03fe934c92f7c5b0f77a13725f4183ef316c1ed7ebd16"
+    },
+    {
+      "path": "docs/adr/ADR-018-ENTERPRISE-FLEET-CONTROL-PLANE.md",
+      "bytes": 748,
+      "sha256": "aef04e3be26caf32f46ca3d98ee1362fd8c15fc42eb5320fe09b8b64b19c0532"
+    },
+    {
+      "path": "docs/adr/ADR-019-CONTROL-PLANE-DATA-STORAGE.md",
+      "bytes": 797,
+      "sha256": "0038a336cba86af82bfb3d5d0a0761a85a37f392158392eb2c89bf712736318f"
+    },
+    {
+      "path": "docs/adr/ADR-020-SECRETS-AND-KEY-MANAGEMENT.md",
+      "bytes": 763,
+      "sha256": "1c338120df582f4febdc12ecd6f82f62b08bcafc8f7d8b37c179641ad766cf45"
+    },
+    {
+      "path": "docs/adr/ADR-021-MOBILE-AUTHENTICATION-IS-NOT-SSH.md",
+      "bytes": 783,
+      "sha256": "7bb424e37e233c31142a211c3da554b7040fafe9882fcd797520685f59a0410a"
+    },
+    {
+      "path": "docs/adr/ADR-022-LOCAL-FIRST-ENDPOINT-SCANNING.md",
+      "bytes": 761,
+      "sha256": "003f66454ec2559335fe46ebbdd987cd8124f353d0e8c543e9c25c925b3db673"
+    },
+    {
+      "path": "docs/adr/ADR-023-POSTGRESQL-FINGERPRINT-REGISTRY.md",
+      "bytes": 6194,
+      "sha256": "c8e0fbc20a5c6866015a7862be8270e3591165730dc9ab0772726f9a32123c16"
+    },
+    {
+      "path": "docs/architecture/AI_BOUNDARY.md",
+      "bytes": 786,
+      "sha256": "28ad9b4f3d9a1967a3c8d0f55e5bd60f642dafbc73ec5b081dad8cc414f0b673"
+    },
+    {
+      "path": "docs/architecture/ENTERPRISE_TARGET_ARCHITECTURE.md",
+      "bytes": 2339,
+      "sha256": "f23c0fc3171502dea38d4fbaaab66288be940b6091782182a4af19db694f506b"
+    },
+    {
+      "path": "docs/architecture/LANGUAGE_AND_ABI_STRATEGY.md",
+      "bytes": 248,
+      "sha256": "8d8351308b70bc372b8ee295da661b925e6439788391e8dedcd834d9b45a11b2"
+    },
+    {
+      "path": "docs/architecture/LOCAL_FIRST_DATA_FLOW.md",
+      "bytes": 248,
+      "sha256": "fcca368a2db59d07f46f228167319367f3b67171c939160446ae04a5070489f0"
+    },
+    {
+      "path": "docs/architecture/RULE_COMPILER_AUTOLOADER_BOUNDARY.md",
+      "bytes": 944,
+      "sha256": "2b94d36fcbda28eb5eb8b3d04649207d08ab0030971117f0fa7949f22fe1ee21"
+    },
+    {
+      "path": "docs/architecture/TRUST_BOUNDARIES_AND_DFD.md",
+      "bytes": 1433,
+      "sha256": "07b8f4d42d3b91f394b28b14397e3389a9d3d013d1b69be29a110df3624f75fa"
+    },
+    {
+      "path": "docs/archive/SENTINEL_CLOSEOUT_2026-08-06.md",
+      "bytes": 1985,
+      "sha256": "ab83c46c8168ff771b85080df3239cecd20870726f4976b62a4d127b409dfba9"
+    },
+    {
+      "path": "docs/contracts/C_ABI_CONTRACT.md",
+      "bytes": 332,
+      "sha256": "45f367b7bc6561dcc863358678523610b961b918978e7f6c2475ca83e19fe498"
+    },
+    {
+      "path": "docs/contracts/DETECTION_RESULT_CONTRACT.md",
+      "bytes": 1071,
+      "sha256": "03eee4c4f13768c3d6ddfc6e1c2ddd4774cd7523bced4468f23867076f295409"
+    },
+    {
+      "path": "docs/contracts/FAILURE_MODE_MATRIX.md",
+      "bytes": 2257,
+      "sha256": "1d6b408337bd920d05d4daaa444bc1dbcfa3cb4791a0f201417dcd5b6029ccca"
+    },
+    {
+      "path": "docs/contracts/MOBILE_IDENTITY_CONTRACT.md",
+      "bytes": 249,
+      "sha256": "c235d84741fc8e987e66ccbf140442452039dee50004e63df212ae1fe239d10f"
+    },
+    {
+      "path": "docs/contracts/NATIVE_ADAPTER_ABI_CONTRACT.md",
+      "bytes": 214,
+      "sha256": "58814941bd1c304034a965499e6cfc96771426ae79de9b6737eee75f011a1bf7"
+    },
+    {
+      "path": "docs/contracts/NORMALIZED_EVENT_CONTRACT.md",
+      "bytes": 1501,
+      "sha256": "c4f7406599a6e1af60a2378a2ae3c523cd8114cb6ca2ee07bd64f4fb0a787487"
+    },
+    {
+      "path": "docs/contracts/PLATFORM_CAPABILITY_CONTRACT.md",
+      "bytes": 592,
+      "sha256": "2200b7f3ea592ce7f834d1b36d86b9aff9f6764e766a0e6fa9701fd088266dd7"
+    },
+    {
+      "path": "docs/contracts/RAW_SAMPLE_UPLOAD_CONTRACT.md",
+      "bytes": 285,
+      "sha256": "1d21138e709f45ba3d37263a622af98dfb0edc188c3a5f2a0a1d05987fb68e77"
+    },
+    {
+      "path": "docs/contracts/RESPONSE_AUTHORITY_MATRIX.md",
+      "bytes": 1719,
+      "sha256": "aa106c7b7d0f17fdbf57bc9dd996697e5fb3be00c21275eb95812f78e703e2e0"
+    },
+    {
+      "path": "docs/contracts/RULE_BUNDLE_CONTENT_IDENTITY_CONTRACT.md",
+      "bytes": 273,
+      "sha256": "dbced9502a0e66780e7f27e4044896daad087066a42253269bccd60544a349ca"
+    },
+    {
+      "path": "docs/contracts/RULE_BUNDLE_DOWNGRADE_ROLLBACK_CONTRACT.md",
+      "bytes": 251,
+      "sha256": "f5708cdb9ae76ab33b332c7c8c40ba0d95d77b5635ce0364913a3b7bd2858019"
+    },
+    {
+      "path": "docs/contracts/RULE_BUNDLE_INTEGRITY_TIER_CONTRACT.md",
+      "bytes": 244,
+      "sha256": "c3971467cf5431abdc3fffc1aabf74227e2045d48fe81e662672d8ef674f849b"
+    },
+    {
+      "path": "docs/contracts/RULE_BUNDLE_LAST_KNOWN_GOOD_CONTRACT.md",
+      "bytes": 235,
+      "sha256": "3f42acac65e6094f0dc9111f63aad9527ceae07472fe1e24dd9206dc6180ceaa"
+    },
+    {
+      "path": "docs/contracts/RULE_BUNDLE_LOADER_STATE_CONTRACT.md",
+      "bytes": 250,
+      "sha256": "9e3a45fd0d29679cb821aa13f1d0d0599ec50a62e7b7340b3611c354c8c9987d"
+    },
+    {
+      "path": "docs/contracts/RULE_BUNDLE_PORTABLE_PATH_CONTRACT.md",
+      "bytes": 266,
+      "sha256": "9712b5b271f059304ec3f58aa92b6e019a6dcd65b8225fe545d43ae88f902f04"
+    },
+    {
+      "path": "docs/contracts/RULE_BUNDLE_READ_ONLY_BOUNDARY_CONTRACT.md",
+      "bytes": 203,
+      "sha256": "11229b8f80d81e1b3f26238ef5394419eb853ea905538e01a23abb73f0201288"
+    },
+    {
+      "path": "docs/contracts/RULE_BUNDLE_SIGNATURE_CONTEXT_CONTRACT.md",
+      "bytes": 1049,
+      "sha256": "0f970ad114071ae5bb673ab77b389ad8011ce3df7ff64619659c4f161eb064e9"
+    },
+    {
+      "path": "docs/contracts/SAMPLE_HANDLING_CONTRACT.md",
+      "bytes": 226,
+      "sha256": "3f5b683b9600974efbf70b5403ceba6b1e75b1bfe8b10f66f3842e43c1c4d989"
+    },
+    {
+      "path": "docs/contracts/SIGNED_POLICY_INTENT_CONTRACT.md",
+      "bytes": 319,
+      "sha256": "80987285e2c54c0267771d13e05b326b992eeeb0e9a5936745c7a4b139099618"
+    },
+    {
+      "path": "docs/contracts/TELEMETRY_BUDGET_CONTRACT.md",
+      "bytes": 267,
+      "sha256": "803ef2fd92c7934c0aadff5cf5872fb0c233ec04c105b7c11d073f624129e027"
+    },
+    {
+      "path": "docs/detection/DEFENSIVE_DETECTION_MATRIX.md",
+      "bytes": 3188,
+      "sha256": "dc88a18d02a7eada86d08b8b698403fa6d494bb4c4586f46df8575bd8e870df9"
+    },
+    {
+      "path": "docs/detection/QUALITY_METRICS.md",
+      "bytes": 743,
+      "sha256": "0ebad0e12e6cd7c6297cbe846aa366e11bc0288892ed77f16c3404e37572bbc7"
+    },
+    {
+      "path": "docs/detection/RULE_LIFECYCLE.md",
+      "bytes": 784,
+      "sha256": "0db23dbcf72b8bc6c30f318a4a4e5d99573fe9b36df22a25457ffef09e97ba27"
+    },
+    {
+      "path": "docs/formats/ELF_PARSER_CONTRACT.md",
+      "bytes": 838,
+      "sha256": "334a2f3e357717b2a318de1dbe9aedc7411d06f0b8c3e135d66b9af012dbbc04"
+    },
+    {
+      "path": "docs/formats/MACHO_PARSER_CONTRACT.md",
+      "bytes": 796,
+      "sha256": "a1284bb7abc76454495fde90be6a2b7b34bc8b4cddfc82dab3cfaf42372da056"
+    },
+    {
+      "path": "docs/formats/PE_PARSER_CONTRACT.md",
+      "bytes": 782,
+      "sha256": "94612d3cc7acf0668cd9cf83b6da21018202a4c39388107eec9fa217d988a193"
+    },
+    {
+      "path": "docs/future/CERTIFICATE_TRUST_CONTRACT.md",
+      "bytes": 383,
+      "sha256": "7ff89fcd506b79c99795079d7effd23245bdf73616268a9bc0f74a9fc62c58c9"
+    },
+    {
+      "path": "docs/future/MEMORY_OBSERVATION_CONTRACT.md",
+      "bytes": 411,
+      "sha256": "5c214ff5e8ce63dc39b30e20f113c845731807e1984ec125184f4f4fb2fb2bff"
+    },
+    {
+      "path": "docs/future/NETWORK_POLICY_CONTRACT.md",
+      "bytes": 389,
+      "sha256": "98a8e193ca011abe43b38407c168d89dd288d5a0822a63af131764096ab704c6"
+    },
+    {
+      "path": "docs/future/PRIVACY_SHIELD_CONTRACT.md",
+      "bytes": 341,
+      "sha256": "1ef3174fdf17e3cb6fa91f505d3e05ebf45e3d02e43299a9f7dd5930995499b4"
+    },
+    {
+      "path": "docs/future/QUARANTINE_AND_RESTORE_CONTRACT.md",
+      "bytes": 305,
+      "sha256": "5c308dd546dcf13231a1a4f21097976750b6be78eda7536a2a99bca33d286765"
+    },
+    {
+      "path": "docs/platform/LINUX_COLLECTOR_CONTRACT.md",
+      "bytes": 1131,
+      "sha256": "17f5a6de1c573b88da71d8d6b9ad7f3748e221215dd6b7484f7081b0857d34ae"
+    },
+    {
+      "path": "docs/platform/MACOS_COLLECTOR_CONTRACT.md",
+      "bytes": 1138,
+      "sha256": "dd5875913f5d8d6e061a4914e6b58754adf417a539fb0e9785203d71c960e444"
+    },
+    {
+      "path": "docs/platform/PLATFORM_SUPPORT_MATRIX.md",
+      "bytes": 689,
+      "sha256": "bb56b8ebd7a92dc8748b764f574a525ed78ca01e43cb8a6abe3b7dedf7e6f626"
+    },
+    {
+      "path": "docs/platform/PORTABILITY_TEST_PLAN.md",
+      "bytes": 474,
+      "sha256": "beeb78bf33ad586357bf38a7a8978520d113f12305b22de39f3ba9fb81dc692e"
+    },
+    {
+      "path": "docs/platform/WINDOWS_COLLECTOR_CONTRACT.md",
+      "bytes": 1252,
+      "sha256": "d0dc443b052d7f2d9530af51b0b2b598f970ce9347f3db1e36689ce7d12766a2"
+    },
+    {
+      "path": "docs/portfolio/CV_PROJECT_BLURB.md",
+      "bytes": 2027,
+      "sha256": "868903665a6c6f73b7277ee7b8e70656422a371d2951e591cec0d6a2a9a34547"
+    },
+    {
+      "path": "docs/product/ADR-001-DESKTOP-SHELL.md",
+      "bytes": 2128,
+      "sha256": "a2620dfbaa60ecb5803ed23013006c5d62913315738a9f2de24a22a6f2eaaa64"
+    },
+    {
+      "path": "docs/product/ADR-002-LOCAL-PERSISTENCE.md",
+      "bytes": 1257,
+      "sha256": "a8cedb56573de44d8b7959f434d735b66c9da7fdfc9c15ea571cb99a6c188700"
+    },
+    {
+      "path": "docs/product/DTO_CONTRACT_V1.md",
+      "bytes": 1264,
+      "sha256": "bd78d115793d7cb7495693bddf60b4e3b09891779fe28c3dc67d861e50e39622"
+    },
+    {
+      "path": "docs/product/P0_MUTATION_PLAN.md",
+      "bytes": 1028,
+      "sha256": "28a191fc543462e232e3416217a2bc1fdb88d2d1f39dce0ec6a69e39906fa2b9"
+    },
+    {
+      "path": "docs/product/P1-B-ASYNC-BOUNDARY-ADDENDUM.md",
+      "bytes": 307,
+      "sha256": "cb585b1a4df5ab379fc3043259b5c9355d110649ed9b537c517eb23686e8631c"
+    },
+    {
+      "path": "docs/product/P1_TOOLCHAIN_REPORT.md",
+      "bytes": 1096,
+      "sha256": "4276be60da3205094f7909dc6ed97f0c1939b337ff7de76d95f16f296def8a93"
+    },
+    {
+      "path": "docs/product/PRODUCT_RISK_REGISTER.md",
+      "bytes": 1273,
+      "sha256": "052bce8c1248efbd3ce8467b8220249159f1dbd5cbedc5d33d285829559be935"
+    },
+    {
+      "path": "docs/product/UI_ROUTE_MAP.md",
+      "bytes": 799,
+      "sha256": "0e4dc91c50594b2e48f2e59d2ba9a83f3c7095a66f4e59425422a32c69ff2516"
+    },
+    {
+      "path": "docs/release/DEPENDENCY_REVIEW.md",
+      "bytes": 1882,
+      "sha256": "b71831187a90158976ab5a0cae2c6b4cddc6d04b8148d7bcffcf1fa8c973d0a9"
+    },
+    {
+      "path": "docs/release/KNOWN_LIMITATIONS.md",
+      "bytes": 1169,
+      "sha256": "33ff8eaaf5b96af0a7fe1d8f7fa8056b5729821d680c692e36b8c6c6b9c2b50e"
+    },
+    {
+      "path": "docs/release/PHASE1_RELEASE_NOTES.md",
+      "bytes": 873,
+      "sha256": "6e36aeacc964e2e33f5aadef791caf623724e2a319a58ec37a269e4025a414a4"
+    },
+    {
+      "path": "docs/release/PUBLICATION_MANIFEST.md",
+      "bytes": 435,
+      "sha256": "3f20aee6a597476f5aa416014fe0ff0a0a9ca088bb9e0e600cff558744d7b793"
+    },
+    {
+      "path": "docs/release/REVIEWER_GUIDE.md",
+      "bytes": 1461,
+      "sha256": "f06c8971aee37f139541eb8f5b723018db28be3652e2d6226d0f1296769cd4b1"
+    },
+    {
+      "path": "docs/release/SOURCE_CORPUS_PUBLICATION_DECISION.md",
+      "bytes": 962,
+      "sha256": "07c198a0a47d4277a05db602e4da72d4988d3c79da279222a0cc94695f5f73c1"
+    },
+    {
+      "path": "docs/release/VERIFICATION_RECEIPT.md",
+      "bytes": 1540,
+      "sha256": "8468c808677b5aad5cf78b700bdb2b8e05bbf3c7b5c63c796cb711c507479687"
+    },
+    {
+      "path": "docs/reports/AUTOLOADER_PASS_A_STOP_MISSING_COMPILER_SEMANTICS.md",
+      "bytes": 4930,
+      "sha256": "b818e08eddb651e931b0ed8199cd3ae9ab4456bb477cfdf58e0d46b311735af6"
+    },
+    {
+      "path": "docs/research/KIMI_CLAIM_LEDGER.md",
+      "bytes": 11237,
+      "sha256": "2ddec8a57551248293e40a33cd560a2b4eff4ac57e37685f0b753beca96cd29e"
+    },
+    {
+      "path": "docs/research/MACOS_THREAT_CORPUS_PROVENANCE_2026-08-10.md",
+      "bytes": 1732,
+      "sha256": "91ba292ab0b8bec7146528e0869f6945f9a73085098645a1eea9f7bdcd247a44"
+    },
+    {
+      "path": "docs/research/MACOS_THREAT_DELTA_PROVENANCE_2026-08-12.md",
+      "bytes": 1158,
+      "sha256": "6e9766514646a98fd09e35a78c95b60e27b18ce46d5b2dca5a813ca10d8d60e7"
+    },
+    {
+      "path": "docs/roadmap/PHASED_ROADMAP.md",
+      "bytes": 3155,
+      "sha256": "4caa6450ee37b09b93d4db198bb28969f1e2b4d13fa30d1af8212fdf18d88449"
+    },
+    {
+      "path": "docs/roadmap/SENTINEL_PHASE_LEDGER.json",
+      "bytes": 3422,
+      "sha256": "5fd02103dd4be3807fe9eef233ce368164bc6303f49dcdb5df2f8112246e87ab"
+    },
+    {
+      "path": "docs/roadmap/SENTINEL_SIX_PHASE_MATURITY_PROGRAM.md",
+      "bytes": 1501,
+      "sha256": "fea4ee85773b123709ceef6751fcf9c3aa50c0e2d1b820f75a832c7d4de13347"
+    },
+    {
+      "path": "docs/security/ISOLATED_TEST_LAB.md",
+      "bytes": 387,
+      "sha256": "9b718bc1225a0daaf2c831d112f3f23f0963f0caf25754ea5781333611a5810a"
+    },
+    {
+      "path": "docs/security/RULE_BUNDLE_HOSTILE_MUTATIONS.md",
+      "bytes": 259,
+      "sha256": "8cd5cc36a176c4d491f2cf4ec8785825b9fe4bbe561e62a9424ad454f58b73ed"
+    },
+    {
+      "path": "evidence.json",
+      "bytes": 1974,
+      "sha256": "f7aab5c5461f7d9689cefee855df7982af508aaf9b2658a0f7f421e1fa6a5fd4"
+    },
+    {
+      "path": "fuzz/Cargo.toml",
+      "bytes": 475,
+      "sha256": "cd4a3fd40197e132ce3aa0745508f65ecdfd679dabbd3283c98d0f754b986757"
+    },
+    {
+      "path": "fuzz/fuzz_targets/pe_parser.rs",
+      "bytes": 111,
+      "sha256": "a6d9241498683926fb8ec1c1775d4813c2e06a35d2d2f49821fd5a7654becd03"
+    },
+    {
+      "path": "fuzz/fuzz_targets/rule_parser.rs",
+      "bytes": 183,
+      "sha256": "349f3f809e4b1cd609cfa17a28dc2e7700ef6aea668ff13d37d01a75554ed5fb"
+    },
+    {
+      "path": "migrations/0001_create_fingerprint_registry.sql",
+      "bytes": 2412,
+      "sha256": "149bb8b1673a0f7a3045cae2b28c10afa0436e7a1c0c5364e53ac2d6666ab579"
+    },
+    {
+      "path": "migrations/0002_add_fingerprint_indexes.sql",
+      "bytes": 237,
+      "sha256": "cba43dbe3ad868999d96501aabd1996ea8fc383ba705c5e0d833040b35e7ac0c"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "bytes": 86,
+      "sha256": "4478772744e88a3e35394171f27f9d035b17ee4a624368da7a929aa862b26c7e"
+    },
+    {
+      "path": "schemas/product/v1/application-error.schema.json",
+      "bytes": 346,
+      "sha256": "6912b2abf0b4de60627d30444fefbe665b7ec616d8a785226f9948b32068afcf"
+    },
+    {
+      "path": "schemas/product/v1/canonical-receipt.schema.json",
+      "bytes": 378,
+      "sha256": "21ec0df11ca5735afbf67532bfcadf3f03d2e7d9b279f4e8016d8d2e49dd6f1d"
+    },
+    {
+      "path": "schemas/product/v1/rule-pack-binding.schema.json",
+      "bytes": 383,
+      "sha256": "b6cf3585d5b096ba2698fc437bb26bd500ed9ae61a126785815d0237d9cbd7d7"
+    },
+    {
+      "path": "schemas/product/v1/scan-file-request.schema.json",
+      "bytes": 363,
+      "sha256": "e545e7dbbed4d5ac7d9e921379917880aa6b77d3f93a4d40307b41e3c1ccdab8"
+    },
+    {
+      "path": "schemas/product/v1/scan-finding.schema.json",
+      "bytes": 420,
+      "sha256": "89b80f7c1ebaea09c9e24959793bfa52434650ae7402d4e6d448312793eace8e"
+    },
+    {
+      "path": "schemas/product/v1/scan-result.schema.json",
+      "bytes": 763,
+      "sha256": "ff4288abe77c1039f41511508dc640b5a485057f081d74d7ee8f1c6ce4fb6fc8"
+    },
+    {
+      "path": "scripts/check_migrations.sh",
+      "bytes": 2248,
+      "sha256": "6e68b7ec716d3bdf6fd4204ff5bce198a712f2b1a8f592b97789df5b7238c5b1"
+    },
+    {
+      "path": "scripts/verify-demo.sh",
+      "bytes": 1235,
+      "sha256": "7f1e8c748324f9472164dce94853d70fe856780bb462dd5f9013c750fdccb987"
+    },
+    {
+      "path": "scripts/verify_sentinel_phase_ledger.py",
+      "bytes": 2771,
+      "sha256": "d75ef4c92d5e2c8f221f1ed89634119ed1b1844953f2fe4195eba3eb20f111ee"
+    },
+    {
+      "path": "tests/Cargo.toml",
+      "bytes": 540,
+      "sha256": "3dd08d30e4d3a734ddda42b1cf0dbcd6fd2b087a271669e9cce13008826324ad"
+    },
+    {
+      "path": "tests/fixtures/broken.yar",
+      "bytes": 36,
+      "sha256": "a44b36c8406ad3e571a472015fb88eda44e03fe9b80bc2b9f38c939ae26cf97e"
+    },
+    {
+      "path": "tests/fixtures/harmless-negative.txt",
+      "bytes": 68,
+      "sha256": "59ff59cdbf948bd13893820e0499edbe41d3f8e54dd4d1f3a4d85e1de4f21a90"
+    },
+    {
+      "path": "tests/fixtures/harmless-positive.txt",
+      "bytes": 84,
+      "sha256": "bfd5abcb3838e437b1c995bcdb45a8b5497ff80c52cc344421b6173fb9e10eb1"
+    },
+    {
+      "path": "tests/fixtures/harmless-yara-negative.txt",
+      "bytes": 49,
+      "sha256": "99537fec0c538378f6ac16587f4710bf67aa473b27a223bc02eabc486b90c58f"
+    },
+    {
+      "path": "tests/fixtures/harmless-yara-positive.txt",
+      "bytes": 46,
+      "sha256": "a554c076b6e80592671c7efe38ee081ab9109f9b256bd23f3e72ff968aa03f58"
+    },
+    {
+      "path": "tests/fixtures/harmless.rules",
+      "bytes": 109,
+      "sha256": "1fcb5dc258eb2242953f372d0636afd5eb77609d528d8ac1cfdeb23bd7b90074"
+    },
+    {
+      "path": "tests/fixtures/harmless.yar",
+      "bytes": 223,
+      "sha256": "8a5050b5cb6806dc8cf5f58acb4f4a4f8295f23561751efdf082be2cd5189bff"
+    },
+    {
+      "path": "tests/product/fixtures/scan-file-request-negative.json",
+      "bytes": 231,
+      "sha256": "5f2480058792716a07603a9efd2285d95932b58c00825469c790e8da9ef802e6"
+    },
+    {
+      "path": "tests/product/fixtures/scan-file-request-positive.json",
+      "bytes": 283,
+      "sha256": "46b09b2f0ae94639bcf9f2486e04f8b5ae7aef9c0a94eb5606ce5ca4790231b1"
+    },
+    {
+      "path": "tests/src/lib.rs",
+      "bytes": 101,
+      "sha256": "e21e91f5abfb61587bd85f088158c6432fa9b68e3952d25220ad7f726a202181"
+    },
+    {
+      "path": "tests/tests/vertical_slice.rs",
+      "bytes": 2334,
+      "sha256": "f7b71703773a149e316f4d5c6b5c6d28421b2212c8862f8d57ca2b02c14c41e8"
+    },
+    {
+      "path": "tools/verify-architecture.mjs",
+      "bytes": 10346,
+      "sha256": "5c8404d9ec55c55c0621325be9e9bf5bf3b5cd9dc6a32ed047637a16ae6ecc2c"
+    },
+    {
+      "path": "tools/verify-evidence.mjs",
+      "bytes": 2453,
+      "sha256": "d9b53cc521685912c8f1628f75de484564c770860a265fdbef76eee3ef3b75bc"
+    },
+    {
+      "path": "tools/verify-portability.mjs",
+      "bytes": 2911,
+      "sha256": "2f3a64d74491fd32e31e277db19a702fbc0f00e90e250a1a878340a694692029"
+    }
+  ]
+}
